@@ -63,6 +63,8 @@ class _TripCodeSearchScreenState extends State<TripCodeSearchScreen> {
       MaterialPageRoute(
         builder: (_) => TripListScreen(
           tripType: tripType,
+
+          /// 🔥 توحيد الاستخدام مع باقي الشاشات
           category: category,
         ),
       ),

@@ -61,7 +61,6 @@ class VehicleCodesScreen extends StatelessWidget {
         child: Column(
           children: [
 
-            /// 🔥 كود المشرف (بدل الشركة)
             buildCard(
               context: context,
               title: "كود المشرف",
@@ -71,7 +70,6 @@ class VehicleCodesScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            /// 🔥 كود الرحلات
             buildCard(
               context: context,
               title: "كود عرض الرحلات",
@@ -93,7 +91,11 @@ class VehicleCodesScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (_) => CompanyTripsScreen(
-                        companyCode: supervisorCode, // 🔥 استخدمناه كمعرف
+
+                        /// 👇 نخلي ده زي ما هو (ما نكسر النظام)
+                        companyCode: supervisorCode,
+
+                        /// 🔥 نستخدمو كـ ID فعلي للرحلات
                         tripsCode: tripsCode,
                       ),
                     ),

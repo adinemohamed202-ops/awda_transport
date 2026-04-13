@@ -30,7 +30,6 @@ class _VerifyScreenState extends State<VerifyScreen> {
     super.dispose();
   }
 
-  /// ✅ تأكيد الكود
   Future<void> verify() async {
 
     String code = codeController.text.trim();
@@ -56,11 +55,18 @@ class _VerifyScreenState extends State<VerifyScreen> {
 
       if (!mounted) return;
 
-      if (response["success"] == true) {
+      /// 🔥 أهم تعديل هنا
+      if (response["success"] == true || response["status"] == "success") {
+
+        String userId =
+            response["user"]?["id"]?.toString() ??
+            response["userId"]?.toString() ??
+            "";
+
+        debugPrint("✅ Verified userId: $userId");
 
         showMsg("تم توثيق الحساب ✅");
 
-        /// 🔥 يرجع لتسجيل الدخول
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -81,7 +87,6 @@ class _VerifyScreenState extends State<VerifyScreen> {
     }
   }
 
-  /// 🔁 إعادة إرسال الكود
   Future<void> resendCode() async {
 
     setState(() => isResending = true);
@@ -92,7 +97,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
 
       if (!mounted) return;
 
-      if (response["success"] == true) {
+      if (response["success"] == true || response["status"] == "success") {
         showMsg("تم إرسال الكود مرة أخرى 📩");
       } else {
         showMsg(response["message"] ?? "فشل إعادة الإرسال");

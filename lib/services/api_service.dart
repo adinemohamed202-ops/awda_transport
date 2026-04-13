@@ -1,15 +1,22 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:async';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../utils/user_session.dart';
 
 class ApiService {
+  static const String baseUrl =
+      "https://backend-production-54e7.up.railway.app/api";
 
-  static String baseUrl = "http://192.168.1.3:3000";
+  static String? _token;
 
-  static Future<Map<String, String>> _headers({bool isJson = true, bool withAuth = true}) async {
-    String token = UserSession.token;
+  static void setToken(String token) {
+    _token = token;
+  }
+
+  /// ================= HEADERS =================
+  static Future<Map<String, String>> _headers({bool withAuth = true}) async {
+    String token = _token ?? "";
 
     if (token.isEmpty) {
       await UserSession.loadUser();
@@ -17,219 +24,79 @@ class ApiService {
     }
 
     return {
-      if (isJson) "Content-Type": "application/json",
-      if (withAuth && token.isNotEmpty) "Authorization": "Bearer $token",
+      if (withAuth && token.isNotEmpty)
+        "Authorization": "Bearer $token",
     };
   }
 
-  static Future<http.Response> _safeRequest(
-      Future<http.Response> Function() request) async {
+  /// ================= REQUEST =================
+  static Future<Map<String, dynamic>> post(
+      String endpoint, Map<String, dynamic> body,
+      {bool withAuth = true}) async {
     try {
-      return await request().timeout(const Duration(seconds: 10));
-    } catch (e) {
-      print("⚠️ retrying request...");
-      await Future.delayed(const Duration(seconds: 2));
-      return await request().timeout(const Duration(seconds: 10));
-    }
-  }
+      final headers = await _headers(withAuth: withAuth);
 
-  static Future<Map<String, dynamic>> login(
-      String email, String password) async {
-    try {
-      final headers = await _headers(withAuth: false);
-
-      final response = await _safeRequest(() => http.post(
-            Uri.parse("$baseUrl/login"),
-            headers: headers,
-            body: jsonEncode({
-              "email": email.trim(),
-              "password": password.trim(),
-            }),
-          ));
+      final response = await http
+          .post(
+            Uri.parse("$baseUrl$endpoint"),
+            headers: {
+              "Content-Type": "application/json",
+              ...headers,
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 15));
 
       return _handleResponse(response);
     } catch (e) {
-      return _error("فشل الاتصال بالسيرفر");
+      return _error("فشل الاتصال");
     }
   }
 
-  static Future<Map<String, dynamic>> register(
-      String name, String phone, String email, String password) async {
-    try {
-      final headers = await _headers(withAuth: false);
-
-      final response = await _safeRequest(() => http.post(
-            Uri.parse("$baseUrl/register"),
-            headers: headers,
-            body: jsonEncode({
-              "name": name.trim(),
-              "phone": phone.trim(),
-              "email": email.trim(),
-              "password": password.trim(),
-            }),
-          ));
-
-      return _handleResponse(response);
-    } catch (e) {
-      return _error("مشكلة في الاتصال بالسيرفر");
-    }
-  }
-
-  static Future<Map<String, dynamic>> verifyCode(
-      String email, String code) async {
-    try {
-      final headers = await _headers(withAuth: false);
-
-      final response = await _safeRequest(() => http.post(
-            Uri.parse("$baseUrl/verify"),
-            headers: headers,
-            body: jsonEncode({
-              "email": email.trim(),
-              "code": code.trim(),
-            }),
-          ));
-
-      return _handleResponse(response);
-    } catch (e) {
-      return _error("فشل التحقق من الكود");
-    }
-  }
-
-  // ✅ تم التصحيح هنا فقط
-  static Future<Map<String, dynamic>> resendCode(String email) async {
-    try {
-      final headers = await _headers(withAuth: false);
-
-      final response = await _safeRequest(() => http.post(
-            Uri.parse("$baseUrl/resend"),
-            headers: headers,
-            body: jsonEncode({
-              "email": email.trim(),
-            }),
-          ));
-
-      return _handleResponse(response);
-    } catch (e) {
-      return _error("فشل إعادة إرسال الكود");
-    }
-  }
-
-  static Future<List<dynamic>> getTrips(
-      String tripType, String? category) async {
-    try {
-      final uri = Uri.parse(
-          "$baseUrl/trips?tripType=$tripType&category=${category ?? ""}");
-
-      final headers = await _headers();
-
-      final response =
-          await _safeRequest(() => http.get(uri, headers: headers));
-
-      if (response.body.isEmpty) return [];
-
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200) {
-        if (data is List) return data;
-        if (data is Map && data["trips"] is List) return data["trips"];
-      }
-
-      return [];
-    } catch (e) {
-      return [];
-    }
-  }
-
-  static Future<Map<String, dynamic>> getWallet(String userId) async {
+  static Future<Map<String, dynamic>> get(String endpoint) async {
     try {
       final headers = await _headers();
 
-      final response = await _safeRequest(() => http.get(
-            Uri.parse("$baseUrl/wallet/$userId"),
+      final response = await http
+          .get(
+            Uri.parse("$baseUrl$endpoint"),
             headers: headers,
-          ));
+          )
+          .timeout(const Duration(seconds: 15));
 
       return _handleResponse(response);
     } catch (e) {
-      return _error("فشل تحميل المحفظة");
+      return _error("فشل الاتصال");
     }
   }
 
-  static Future<Map<String, dynamic>> bookSeat({
-    required String tripId,
-    required String userId,
-    required int seatNumber,
-  }) async {
-    try {
-      final headers = await _headers();
-
-      final response = await _safeRequest(() => http.post(
-            Uri.parse("$baseUrl/book"),
-            headers: headers,
-            body: jsonEncode({
-              "tripId": tripId,
-              "userId": userId,
-              "seatNumber": seatNumber,
-            }),
-          ));
-
-      return _handleResponse(response);
-    } catch (e) {
-      return _error("فشل الحجز");
-    }
-  }
-
-  static Future<Map<String, dynamic>> sendSupport({
-    required String userId,
-    required String message,
-  }) async {
-    try {
-      final headers = await _headers();
-
-      final response = await _safeRequest(() => http.post(
-            Uri.parse("$baseUrl/support"),
-            headers: headers,
-            body: jsonEncode({
-              "userId": userId,
-              "message": message.trim(),
-            }),
-          ));
-
-      return _handleResponse(response);
-    } catch (e) {
-      return _error("فشل إرسال المشكلة");
-    }
-  }
-
+  /// ================= POST WITH FILE =================
   static Future<Map<String, dynamic>> postWithFile(
     String endpoint,
-    Map<String, dynamic> data, {
+    Map<String, dynamic> fields, {
     File? file,
     String fileField = "file",
+    bool withAuth = true,
   }) async {
     try {
-      var request = http.MultipartRequest(
-        "POST",
-        Uri.parse("$baseUrl$endpoint"),
-      );
+      final request =
+          http.MultipartRequest("POST", Uri.parse("$baseUrl$endpoint"));
 
-      final headers = await _headers(isJson: false);
+      final headers = await _headers(withAuth: withAuth);
       request.headers.addAll(headers);
 
-      data.forEach((key, value) {
+      fields.forEach((key, value) {
         request.fields[key] = value.toString();
       });
 
-      if (file != null && await file.exists()) {
+      if (file != null) {
         request.files.add(
           await http.MultipartFile.fromPath(fileField, file.path),
         );
       }
 
-      final streamedResponse =
-          await request.send().timeout(const Duration(seconds: 15));
-
-      final response = await http.Response.fromStream(streamedResponse);
+      final res = await request.send();
+      final response = await http.Response.fromStream(res);
 
       return _handleResponse(response);
     } catch (e) {
@@ -237,166 +104,165 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> topUp(String userId, int amount) async {
+  /// ================= DELETE =================
+  static Future<Map<String, dynamic>> delete(
+    String endpoint, [
+    Map<String, dynamic>? body,
+  ]) async {
     try {
       final headers = await _headers();
-      final response = await _safeRequest(() => http.post(
-            Uri.parse("$baseUrl/wallet/top-up"),
-            headers: headers,
-            body: jsonEncode({"userId": userId, "amount": amount}),
-          ));
+
+      final response = await http.delete(
+        Uri.parse("$baseUrl$endpoint"),
+        headers: headers,
+      );
+
       return _handleResponse(response);
     } catch (e) {
-      return _error("فشل شحن المحفظة");
+      return _error("فشل الحذف");
     }
   }
 
-  static Future<List<dynamic>> getCompanyTrips(String companyId) async {
-    try {
-      final headers = await _headers();
-      final response = await _safeRequest(() => http.get(
-            Uri.parse("$baseUrl/company/$companyId/trips"),
-            headers: headers,
-          ));
-      if (response.body.isEmpty) return [];
-      final data = jsonDecode(response.body);
-      if (data is List) return data;
-      if (data is Map && data["trips"] is List) return data["trips"];
-      return [];
-    } catch (e) {
-      return [];
-    }
+  /// ================= AUTH =================
+  static Future<Map<String, dynamic>> register({
+    required String username,
+    required String email,
+    required String password,
+    required String phone,
+  }) {
+    return post("/auth/register", {
+      "username": username,
+      "email": email,
+      "password": password,
+      "phone": phone,
+    }, withAuth: false);
   }
 
-  static Future<Map<String, dynamic>> sendBookingRequest({
-    required String tripId,
-    required String userId,
-    required int seatNumber,
-  }) async {
-    try {
-      final headers = await _headers();
-      final response = await _safeRequest(() => http.post(
-            Uri.parse("$baseUrl/booking/request"),
-            headers: headers,
-            body: jsonEncode({
-              "tripId": tripId,
-              "userId": userId,
-              "seatNumber": seatNumber,
-            }),
-          ));
-      return _handleResponse(response);
-    } catch (e) {
-      return _error("فشل إرسال طلب الحجز");
+  static Future<Map<String, dynamic>> login(
+      String identifier, String password) async {
+    final res = await post("/auth/login", {
+      "username": identifier,
+      "password": password,
+    }, withAuth: false);
+
+    /// 🔥 التعديل الصحيح هنا
+    if (res["token"] != null) {
+      setToken(res["token"]);
+
+      if (res["user"] != null) {
+        final userData = Map<String, dynamic>.from(res["user"]);
+        userData["token"] = res["token"];
+
+        await UserSession.saveUser(userData);
+      }
     }
+
+    return res;
+  }
+
+  /// ================= VERIFY =================
+  static Future<Map<String, dynamic>> verifyCode(
+      String email, String code) {
+    return post("/auth/verify", {
+      "email": email,
+      "code": code,
+    }, withAuth: false);
+  }
+
+  static Future<Map<String, dynamic>> resendCode(String email) {
+    return post("/auth/resend", {
+      "email": email,
+    }, withAuth: false);
+  }
+
+  /// ================= WALLET =================
+  static Future<Map<String, dynamic>> getWallet([String? uid]) {
+    return get("/wallet");
+  }
+
+  static Future<Map<String, dynamic>> topUp(
+      String uid, int amount) {
+    return post("/wallet/topup", {
+      "user_id": uid,
+      "amount": amount,
+    });
+  }
+
+  /// ================= COMPANY =================
+  static String registerCompany() {
+    return "$baseUrl/company/register";
+  }
+
+  static Future<Map<String, dynamic>> getCompanyTrips(String code) {
+    return get("/company/trips?code=$code");
+  }
+
+  /// ================= TRIPS =================
+  static Future<Map<String, dynamic>> getTrips(
+      String type, String category) {
+    return get("/trips?type=$type&category=$category");
   }
 
   static Future<Map<String, dynamic>> bookTrip({
     required String tripId,
-    required List<int> seats,
-    required List passengers,
-  }) async {
-    try {
-      final headers = await _headers();
-
-      final response = await _safeRequest(() => http.post(
-            Uri.parse("$baseUrl/booking/request"),
-            headers: headers,
-            body: jsonEncode({
-              "tripId": tripId,
-              "seats": seats,
-              "passengers": passengers,
-            }),
-          ));
-
-      final data = _handleResponse(response);
-
-      if (!data.containsKey("bookingId")) {
-        data["bookingId"] =
-            DateTime.now().millisecondsSinceEpoch.toString();
-      }
-
-      return data;
-    } catch (e) {
-      return _error("فشل حجز الرحلة");
-    }
+    List<int>? seats,
+    List<dynamic>? passengers,
+  }) {
+    return post("/trips/book", {
+      "trip_id": tripId,
+      "seats": seats ?? [],
+      "passengers": passengers ?? [],
+    });
   }
 
+  /// ================= USER TRIPS =================
+  static Future<Map<String, dynamic>> getUserTrips() {
+    return get("/trips/user");
+  }
+
+  /// ================= USER BOOKINGS =================
+  static Future<Map<String, dynamic>> getUserBookings() {
+    return get("/bookings/user");
+  }
+
+  /// ================= TICKETS =================
+  static Future<Map<String, dynamic>> getTickets() {
+    return get("/tickets");
+  }
+
+  /// ================= CHAT =================
   static Future<Map<String, dynamic>> sendMessage({
-    required String tripId,
-    required String message,
-  }) async {
-    try {
-      final headers = await _headers();
-
-      final response = await _safeRequest(() => http.post(
-            Uri.parse("$baseUrl/chat/send"),
-            headers: headers,
-            body: jsonEncode({
-              "tripId": tripId,
-              "message": message,
-            }),
-          ));
-
-      return _handleResponse(response);
-    } catch (e) {
-      return _error("فشل إرسال الرسالة");
-    }
+    String? message,
+    String? tripId,
+    String? chatId,
+  }) {
+    return post("/chat/send", {
+      "message": message,
+      "trip_id": tripId,
+      "chat_id": chatId,
+    });
   }
 
-  static Future<Map<String, dynamic>> deduct(
-      String userId, double amount) async {
-    try {
-      final headers = await _headers();
-
-      final response = await _safeRequest(() => http.post(
-            Uri.parse("$baseUrl/wallet/deduct"),
-            headers: headers,
-            body: jsonEncode({
-              "userId": userId,
-              "amount": amount,
-            }),
-          ));
-
-      return _handleResponse(response);
-    } catch (e) {
-      return _error("فشل الخصم");
-    }
-  }
-
+  /// ================= RESPONSE =================
   static Map<String, dynamic> _handleResponse(http.Response response) {
     try {
-      if (response.body.isEmpty) {
-        return _error("الرد فاضي من السيرفر");
-      }
-
       final data = jsonDecode(response.body);
 
-      if (response.statusCode == 401) {
-        UserSession.clear();
-        return _error("انتهت الجلسة، سجل دخول من جديد");
+      if (response.statusCode >= 200 &&
+          response.statusCode < 300) {
+        return data;
       }
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return data is Map<String, dynamic>
-            ? data
-            : {"success": true, "data": data};
-      } else {
-        return {
-          "success": false,
-          "message": data is Map && data.containsKey("message")
-              ? data["message"]
-              : "خطأ (${response.statusCode})"
-        };
-      }
+      return {
+        "success": false,
+        "message": data["message"] ?? "خطأ"
+      };
     } catch (e) {
-      return _error("خطأ في تحليل البيانات");
+      return {"success": false, "message": "خطأ"};
     }
   }
 
-  static Map<String, dynamic> _error(String message) {
-    return {
-      "success": false,
-      "message": message,
-    };
+  static Map<String, dynamic> _error(String msg) {
+    return {"success": false, "message": msg};
   }
 }

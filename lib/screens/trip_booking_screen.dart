@@ -27,6 +27,10 @@ class _TripBookingScreenState extends State<TripBookingScreen> {
   @override
   void initState() {
     super.initState();
+
+    /// 🔥 توحيد الـ id
+    widget.trip["id"] ??= widget.trip["tripId"];
+
     bookedSeats = widget.trip["bookedSeats"] ?? 0;
   }
 
@@ -60,12 +64,17 @@ class _TripBookingScreenState extends State<TripBookingScreen> {
   }
 
   Future pickImage(int i) async {
-    final picked = await picker.pickImage(source: ImageSource.gallery);
+    try {
+      final picked =
+          await picker.pickImage(source: ImageSource.gallery);
 
-    if (picked != null) {
-      setState(() {
-        passengers[i]["document"] = File(picked.path);
-      });
+      if (picked != null) {
+        setState(() {
+          passengers[i]["document"] = File(picked.path);
+        });
+      }
+    } catch (e) {
+      showMsg("فشل اختيار الصورة ❌");
     }
   }
 
@@ -91,6 +100,11 @@ class _TripBookingScreenState extends State<TripBookingScreen> {
 
   Future sendBookingRequest() async {
     if (isLoading) return;
+
+    if (widget.trip["id"] == null) {
+      showMsg("خطأ في الرحلة ❌");
+      return;
+    }
 
     if (!validate()) {
       showMsg("أكمل بيانات الركاب ❌");
@@ -140,19 +154,23 @@ class _TripBookingScreenState extends State<TripBookingScreen> {
 
     try {
       File? file;
+
       for (var p in passengers) {
-        if (p["document"] != null) {
+        if (p["document"] != null &&
+            p["document"] is File &&
+            (p["document"] as File).existsSync()) {
           file = p["document"];
           break;
         }
       }
 
+      /// 🔥 استخدام API الموحد
       final response = await ApiService.postWithFile(
-        "/book-trip",
+        "/trips/book",
         {
-          "userId": UserSession.userId,
-          "walletId": UserSession.walletId,
-          "tripId": widget.trip["tripId"],
+          "trip_id": widget.trip["id"],
+          "user_id": UserSession.userId ?? "",
+          "wallet_id": UserSession.walletId ?? "",
           "seats": selectedSeats,
           "passengers": passengers,
           "total": totalCost,
@@ -160,17 +178,16 @@ class _TripBookingScreenState extends State<TripBookingScreen> {
         file: file,
       );
 
-      if (response != null && response["success"] == true) {
+      if (response["success"] == true) {
         showMsg("تم الحجز بنجاح ✅");
 
         if (mounted) {
           Navigator.pop(context, true);
         }
       } else {
-        showMsg(response?["message"] ?? "فشل الحجز ❌");
+        showMsg(response["message"] ?? "فشل الحجز ❌");
       }
     } catch (e) {
-      print(e);
       showMsg("خطأ في السيرفر ❌");
     }
 
@@ -215,7 +232,8 @@ class _TripBookingScreenState extends State<TripBookingScreen> {
                     ),
                     child: Text(
                       "${index + 1}",
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                 );
@@ -241,7 +259,8 @@ class _TripBookingScreenState extends State<TripBookingScreen> {
               Column(
                 children: List.generate(passengers.length, (i) {
                   return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 10),
+                    margin:
+                        const EdgeInsets.symmetric(vertical: 10),
                     child: Padding(
                       padding: const EdgeInsets.all(10),
                       child: Column(
@@ -249,15 +268,17 @@ class _TripBookingScreenState extends State<TripBookingScreen> {
                           Text("راكب رقم ${i + 1}"),
 
                           TextField(
-                            decoration:
-                                const InputDecoration(labelText: "الاسم"),
-                            onChanged: (v) => passengers[i]["name"] = v,
+                            decoration: const InputDecoration(
+                                labelText: "الاسم"),
+                            onChanged: (v) =>
+                                passengers[i]["name"] = v,
                           ),
 
                           TextField(
-                            decoration:
-                                const InputDecoration(labelText: "الهاتف"),
-                            onChanged: (v) => passengers[i]["phone"] = v,
+                            decoration: const InputDecoration(
+                                labelText: "الهاتف"),
+                            onChanged: (v) =>
+                                passengers[i]["phone"] = v,
                           ),
 
                           TextField(
@@ -286,9 +307,15 @@ class _TripBookingScreenState extends State<TripBookingScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: isLoading ? null : sendBookingRequest,
+                  onPressed:
+                      isLoading ? null : sendBookingRequest,
                   child: isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child:
+                              CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
                       : const Text("تأكيد الحجز"),
                 ),
               ),

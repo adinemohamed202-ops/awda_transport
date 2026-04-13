@@ -6,8 +6,11 @@ class WalletService {
   static int balance = 0;
   static List<Map<String, dynamic>> transactions = [];
 
-  /// 🔐 تأكد المستخدم
-  static Future<String?> _getUserId() async {
+  static Future<String?> _getUserId([String? passedId]) async {
+    if (passedId != null && passedId.isNotEmpty) {
+      return passedId;
+    }
+
     if (UserSession.userId.isEmpty) {
       await UserSession.loadUser();
     }
@@ -20,22 +23,23 @@ class WalletService {
     return UserSession.userId;
   }
 
-  /// 💰 تحميل المحفظة
-  static Future<bool> loadWallet() async {
+  static Future<bool> loadWallet([String? userId]) async {
     try {
-      final userId = await _getUserId();
-      if (userId == null) return false;
+      final uid = await _getUserId(userId);
+      if (uid == null) return false;
 
-      final response = await ApiService.getWallet(userId);
+      final response = await ApiService.getWallet(uid);
 
       if (response["success"] == true && response["data"] != null) {
         final data = response["data"];
 
         balance = int.tryParse(data["balance"]?.toString() ?? "0") ?? 0;
 
+        /// 🔥 إصلاح crash لو transactions مش List
         if (data["transactions"] != null && data["transactions"] is List) {
           transactions = List<Map<String, dynamic>>.from(
-            data["transactions"].map((e) => Map<String, dynamic>.from(e)),
+            (data["transactions"] as List)
+                .map((e) => Map<String, dynamic>.from(e)),
           );
         } else {
           transactions = [];
@@ -51,13 +55,14 @@ class WalletService {
     }
   }
 
-  /// 💰 جلب الرصيد
-  static Future<int> getBalance(String walletId) async {
-    await loadWallet();
+  static Future<int> getBalance([String? userId]) async {
+    final uid = await _getUserId(userId);
+    if (uid == null) return 0;
+
+    await loadWallet(uid);
     return balance;
   }
 
-  /// ➕ شحن
   static Future<bool> add({
     required String walletId,
     required int amount,
@@ -66,13 +71,13 @@ class WalletService {
     if (amount <= 0) return false;
 
     try {
-      final userId = await _getUserId();
-      if (userId == null) return false;
+      final uid = await _getUserId(walletId); // 🔥 إصلاح
+      if (uid == null) return false;
 
-      final response = await ApiService.topUp(userId, amount);
+      final response = await ApiService.topUp(uid, amount);
 
       if (response["success"] == true) {
-        await loadWallet();
+        await loadWallet(uid);
 
         transactions.insert(0, {
           "title": title,
@@ -91,17 +96,18 @@ class WalletService {
     }
   }
 
-  /// ❌ خصم
   static Future<bool> deduct({
-    required String userId,
-    required double amount,
+    required int amount,
+    String? userId,
   }) async {
     try {
-      // 🔥 مؤقتاً بنستخدم topUp لتفادي الخطأ (إلى حين إضافة API حقيقي للخصم)
-      final response = await ApiService.topUp(userId, -amount.toInt());
+      final uid = await _getUserId(userId);
+      if (uid == null) return false;
+
+      final response = await ApiService.topUp(uid, -amount);
 
       if (response["success"] == true) {
-        await loadWallet();
+        await loadWallet(uid);
 
         transactions.insert(0, {
           "title": "خصم",
@@ -120,11 +126,10 @@ class WalletService {
     }
   }
 
-  /// 📡 بث الرصيد
   static Stream<int> balanceStream(String walletId) async* {
     while (true) {
       try {
-        await loadWallet();
+        await loadWallet(walletId);
         yield balance;
       } catch (e) {
         print("❌ balanceStream error: $e");
@@ -135,11 +140,10 @@ class WalletService {
     }
   }
 
-  /// 📜 العمليات
   static Stream<List<Map<String, dynamic>>> getTransactions(
       String walletId) async* {
     try {
-      await loadWallet();
+      await loadWallet(walletId);
       yield transactions;
     } catch (e) {
       print("❌ getTransactions error: $e");

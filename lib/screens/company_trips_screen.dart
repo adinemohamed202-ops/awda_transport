@@ -34,13 +34,14 @@ class _CompanyTripsScreenState extends State<CompanyTripsScreen> {
     });
 
     try {
-      // ✅ تم تعديل الاستدعاء ليتوافق مع تعريف الدالة: معامل واحد فقط
       final data = await ApiService.getCompanyTrips(widget.companyCode);
 
       if (!mounted) return;
 
+      final list = data["trips"] ?? data["data"] ?? [];
+
       setState(() {
-        trips = List<Map<String, dynamic>>.from(data);
+        trips = List<Map<String, dynamic>>.from(list);
         isLoading = false;
       });
     } catch (e) {

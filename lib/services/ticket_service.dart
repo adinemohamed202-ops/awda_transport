@@ -1,12 +1,16 @@
 import 'dart:io';
 import '../models/ticket_model.dart';
 import 'api_service.dart';
+import '../utils/user_session.dart'; // 🔥 إضافة فقط
 
 class TicketService {
 
   /// 📥 جلب كل التذاكر
   static Future<List<TicketModel>> getTickets(String userId) async {
     try {
+
+      userId = userId.isEmpty ? (UserSession.userId ?? "") : userId; // 🔥 إضافة
+
       final response = await ApiService.postWithFile(
         "/tickets",
         {
@@ -67,6 +71,9 @@ class TicketService {
   /// ✅ تعليم كل التذاكر كمقروءة
   static Future<bool> markAllAsRead(String userId) async {
     try {
+
+      userId = userId.isEmpty ? (UserSession.userId ?? "") : userId; // 🔥 إضافة
+
       final response = await ApiService.postWithFile(
         "/tickets/mark-all-read",
         {
@@ -91,6 +98,9 @@ class TicketService {
     required File image,
   }) async {
     try {
+
+      userId = userId.isEmpty ? (UserSession.userId ?? "") : userId; // 🔥 إضافة
+
       final response = await ApiService.postWithFile(
         "/deposits/create",
         {
@@ -119,6 +129,9 @@ class TicketService {
     String message = "مشكلة في الإيداع",
   }) async {
     try {
+
+      userId = userId.isEmpty ? (UserSession.userId ?? "") : userId; // 🔥 إضافة
+
       final response = await ApiService.postWithFile(
         "/deposits/issue",
         {

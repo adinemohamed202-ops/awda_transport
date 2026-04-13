@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-
+import '../services/api_service.dart';
 import 'seat_selection_screen.dart';
 
 class TripListScreen extends StatefulWidget {
@@ -28,24 +26,18 @@ class _TripListScreenState extends State<TripListScreen> {
     fetchTrips();
   }
 
-  /// 🔥 جلب الرحلات من السيرفر
+  /// 🔥 جلب الرحلات
   Future<void> fetchTrips() async {
     try {
-      final response = await http.get(
-        Uri.parse('http://192.168.1.3:3000/trips?type=${widget.tripType}'),
-      );
 
-      if (response.statusCode == 200) {
-        setState(() {
-          trips = jsonDecode(response.body);
-          isLoading = false;
-        });
-      } else {
-        setState(() => isLoading = false);
-      }
+      final data = await ApiService.getTrips(widget.tripType);
+
+      setState(() {
+        trips = data;
+        isLoading = false;
+      });
 
     } catch (e) {
-      print("Error: $e");
       setState(() => isLoading = false);
     }
   }

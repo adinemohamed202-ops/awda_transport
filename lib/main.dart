@@ -29,9 +29,16 @@ void listenToDeposits() {
 
   depositsSub = Stream.periodic(const Duration(seconds: 5)).listen((_) async {
     try {
-      final response = await ApiService.postWithFile(
+
+      /// 🔥 إضافة: تأكد من userId
+      final userId = await UserSession.safeUserId();
+      if (userId == null) return;
+
+      final response = await ApiService.post(
         "/deposits",
-        {},
+        {
+          "user_id": userId,
+        },
       );
 
       if (response["data"] == null) return;
@@ -70,7 +77,11 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    listenToDeposits();
+
+    /// 🔥 إضافة: تأكد المستخدم قبل بدء الاستماع
+    if (UserSession.isLoggedIn) {
+      listenToDeposits();
+    }
   }
 
   @override
@@ -85,8 +96,7 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       title: 'Awda App',
 
-      /// 🔥 نظام Routes (مهم جداً)
-      initialRoute: '/login',
+      initialRoute: UserSession.isLoggedIn ? '/home' : '/login',
 
       routes: {
         '/login': (context) => LoginScreen(),

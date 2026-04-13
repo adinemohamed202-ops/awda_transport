@@ -17,7 +17,7 @@ import '../utils/user_session.dart';
 import '../services/wallet_service.dart';
 
 class HomeScreen extends StatefulWidget {
-  HomeScreen({super.key});
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -38,11 +38,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _initUser();
-
-    /// 🔥 تحديث الرصيد تلقائي
-    balanceTimer = Timer.periodic(const Duration(seconds: 15), (t) {
-      _loadBalance();
-    });
   }
 
   @override
@@ -54,30 +49,40 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _initUser() async {
     await UserSession.loadUser();
 
-    userName = UserSession.name;
+    userName = UserSession.name.isEmpty ? "مستخدم" : UserSession.name;
 
     await _loadBalance();
 
-    if (mounted) {
-      setState(() {
-        isReady = true;
-      });
-    }
+    /// 🔥 شغل التايمر بعد التحميل فقط
+    balanceTimer = Timer.periodic(const Duration(seconds: 15), (t) {
+      if (UserSession.userId.isNotEmpty) {
+        _loadBalance();
+      }
+    });
+
+    if (!mounted) return;
+
+    setState(() {
+      isReady = true;
+    });
   }
 
   Future<void> _loadBalance() async {
     try {
+      /// 🔥 حماية من userId الفاضي
+      if (UserSession.userId.isEmpty) return;
+
       final b = await WalletService.getBalance(
         UserSession.userId,
       );
 
-      if (mounted) {
-        setState(() {
-          balance = b;
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        balance = b;
+      });
     } catch (e) {
-      balance = 0;
+      print("❌ balance error: $e");
     }
   }
 
@@ -102,7 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => AdminLoginScreen(),
+          builder: (_) => const AdminLoginScreen(),
         ),
       );
     }
@@ -111,11 +116,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildNotificationIcon() {
     return IconButton(
       icon: const Icon(Icons.notifications, color: Colors.white),
-      onPressed: () {
-        Navigator.push(
+      onPressed: () async {
+        await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => NotificationsScreen(),
+            builder: (_) => const NotificationsScreen(),
           ),
         );
       },
@@ -126,12 +131,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildUserCard() {
     return GestureDetector(
       onTap: () async {
-        /// 🔥 تحديث بعد الرجوع من المحفظة
         await Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => WalletScreen()),
+          MaterialPageRoute(builder: (_) => const WalletScreen()),
         );
 
+        /// 🔥 تحديث بعد الرجوع
         _loadBalance();
       },
       child: Container(
@@ -201,32 +206,32 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final buttons = [
-      _HomeButtonWrapper(
+      const _HomeButtonWrapper(
         icon: Icons.search,
         title: "حجز رحلات",
         screen: TripTypeScreen(),
       ),
-      _HomeButtonWrapper(
+      const _HomeButtonWrapper(
         icon: Icons.business,
         title: "شركات النقل",
         screen: CompaniesScreen(),
       ),
-      _HomeButtonWrapper(
+      const _HomeButtonWrapper(
         icon: Icons.person,
         title: "المشرف",
         screen: SupervisorLoginScreen(),
       ),
-      _HomeButtonWrapper(
+      const _HomeButtonWrapper(
         icon: Icons.confirmation_number,
         title: "تذاكري",
         screen: TicketsScreen(),
       ),
-      _HomeButtonWrapper(
+      const _HomeButtonWrapper(
         icon: Icons.account_balance_wallet,
         title: "المحفظة",
         screen: WalletScreen(),
       ),
-      _HomeButtonWrapper(
+      const _HomeButtonWrapper(
         icon: Icons.support_agent,
         title: "الدعم",
         screen: SupportScreen(),

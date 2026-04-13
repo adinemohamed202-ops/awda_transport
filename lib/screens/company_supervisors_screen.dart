@@ -1,6 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import '../services/api_service.dart';
 
 class CompanySupervisorsScreen extends StatefulWidget {
   final String companyCode;
@@ -23,8 +22,6 @@ class _CompanySupervisorsScreenState
   bool isDeleting = false;
   bool isError = false;
 
-  final String baseUrl = "http://192.168.1.3:3000/api";
-
   @override
   void initState() {
     super.initState();
@@ -41,13 +38,11 @@ class _CompanySupervisorsScreenState
 
     try {
 
-      final res = await http.get(
-        Uri.parse("$baseUrl/supervisors?companyCode=${widget.companyCode}"),
+      final data = await ApiService.get(
+        "/supervisors/${widget.companyCode}",
       );
 
-      final data = res.body.isNotEmpty ? jsonDecode(res.body) : {};
-
-      if (res.statusCode == 200 && data["success"] == true) {
+      if (data["success"] == true) {
 
         setState(() {
           supervisors = data["supervisors"] ?? [];
@@ -82,13 +77,12 @@ class _CompanySupervisorsScreenState
 
     try {
 
-      final res = await http.delete(
-        Uri.parse("$baseUrl/supervisors/$id"),
+      final data = await ApiService.delete(
+        "/supervisors/$id",
+        {},
       );
 
-      final data = res.body.isNotEmpty ? jsonDecode(res.body) : {};
-
-      if (res.statusCode == 200 && data["success"] == true) {
+      if (data["success"] == true) {
 
         showMsg("تم الحذف ✅");
 
@@ -128,7 +122,6 @@ class _CompanySupervisorsScreenState
       body: Stack(
         children: [
 
-          /// 🔥 حالات الشاشة
           if (isLoading)
             const Center(child: CircularProgressIndicator())
 
@@ -242,7 +235,6 @@ class _CompanySupervisorsScreenState
               ),
             ),
 
-          /// 🔥 لودر الحذف
           if (isDeleting)
             Container(
               color: Colors.black.withOpacity(0.2),

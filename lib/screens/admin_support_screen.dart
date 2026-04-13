@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../services/api_service.dart';
 
 class AdminSupportScreen extends StatefulWidget {
   const AdminSupportScreen({super.key});
@@ -10,8 +11,6 @@ class AdminSupportScreen extends StatefulWidget {
 }
 
 class _AdminSupportScreenState extends State<AdminSupportScreen> {
-
-  final String baseUrl = "http://192.168.1.3:3000/api";
 
   List requests = [];
   bool loading = true;
@@ -25,7 +24,7 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
   Future<void> fetchRequests() async {
     try {
       final response = await http.get(
-        Uri.parse("$baseUrl/admin/support"),
+        Uri.parse("${ApiService.baseUrl}/admin/support"),
       );
 
       final data = jsonDecode(response.body);
@@ -45,11 +44,10 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
     }
   }
 
-  /// 🔥 تحديث الحالة (قبول / رفض)
   Future<void> updateStatus(String id, String status, Map item) async {
     try {
       final response = await http.put(
-        Uri.parse("$baseUrl/admin/support/$id"),
+        Uri.parse("${ApiService.baseUrl}/admin/support/$id"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"status": status}),
       );
@@ -59,7 +57,6 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
       if (response.statusCode == 200 && data["success"] == true) {
         showMsg("تم التحديث ✅");
 
-        /// 🔥 لو تم القبول → افتح الشات
         if (status == "accepted") {
           openChat(item);
         }
@@ -73,13 +70,8 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
     }
   }
 
-  /// 🔥 فتح الشات (مبدئياً)
   void openChat(Map item) {
-    // حالياً بس رسالة
     showMsg("تم فتح الشات مع المستخدم");
-    
-    /// لاحقاً:
-    /// Navigator.push(... ChatScreen ...)
   }
 
   void showMsg(String msg) {
@@ -155,7 +147,6 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
                                 CrossAxisAlignment.start,
                             children: [
 
-                              /// 🔥 الحالة
                               Row(
                                 children: [
                                   Icon(getIcon(status),
@@ -173,7 +164,6 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
 
                               const SizedBox(height: 10),
 
-                              /// 🔥 البيانات
                               Text("👤 ${item["name"] ?? ""}",
                                   style: const TextStyle(color: Colors.white)),
                               Text("📱 ${item["phone"] ?? ""}",
@@ -193,7 +183,6 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
 
                               const SizedBox(height: 10),
 
-                              /// 🔥 الأزرار
                               if (status == "pending")
                                 Row(
                                   children: [

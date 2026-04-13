@@ -4,6 +4,8 @@ import 'supervisor_bookings_screen.dart';
 import 'company_agents_screen.dart';
 import 'supervisor_trips_screen.dart';
 
+import '../utils/user_session.dart'; // 🔥 إضافة
+
 class SupervisorDashboardScreen extends StatelessWidget {
   final String companyName;
   final String supervisorName;
@@ -41,7 +43,7 @@ class SupervisorDashboardScreen extends StatelessWidget {
     }
   }
 
-  /// 🔥 زر موحد (تنظيف UI + تقليل تكرار)
+  /// 🔥 زر موحد
   Widget buildButton({
     required IconData icon,
     required String title,
@@ -71,6 +73,26 @@ class SupervisorDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
+    /// 🔥 إضافة: fallback من session (احترافي)
+    final user = UserSession.user;
+
+    final safeCompanyName = companyName.isNotEmpty
+        ? companyName
+        : user?["companyName"] ?? "";
+
+    final safeSupervisorName = supervisorName.isNotEmpty
+        ? supervisorName
+        : user?["name"] ?? "";
+
+    final safePhone = supervisorPhone.isNotEmpty
+        ? supervisorPhone
+        : user?["phone"] ?? "";
+
+    final safeLocation = officeLocation.isNotEmpty
+        ? officeLocation
+        : user?["location"] ?? "";
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("لوحة تحكم المشرف"),
@@ -93,16 +115,16 @@ class SupervisorDashboardScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    companyName,
+                    safeCompanyName,
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text("👤 المشرف: $supervisorName"),
-                  Text("📱 الهاتف: $supervisorPhone"),
-                  Text("📍 الموقع: $officeLocation"),
+                  Text("👤 المشرف: $safeSupervisorName"),
+                  Text("📱 الهاتف: $safePhone"),
+                  Text("📍 الموقع: $safeLocation"),
                   Text("📂 النوع: ${getCategoryName()}"),
                   const Divider(),
                   Text("🔑 كود الشركة: $companyCode"),
@@ -122,10 +144,10 @@ class SupervisorDashboardScreen extends StatelessWidget {
               navigate(
                 context,
                 SupervisorAddTripScreen(
-                  companyName: companyName,
-                  supervisorName: supervisorName,
-                  officeLocation: officeLocation,
-                  phoneNumber: supervisorPhone,
+                  companyName: safeCompanyName,
+                  supervisorName: safeSupervisorName,
+                  officeLocation: safeLocation,
+                  phoneNumber: safePhone,
                   companyCode: companyCode,
                   tripCode: tripCode,
                   category: category,
@@ -145,7 +167,7 @@ class SupervisorDashboardScreen extends StatelessWidget {
                 context,
                 SupervisorTripsScreen(
                   companyCode: companyCode,
-                  supervisorPhone: supervisorPhone,
+                  supervisorPhone: safePhone,
                 ),
               );
             },
@@ -162,7 +184,7 @@ class SupervisorDashboardScreen extends StatelessWidget {
                 context,
                 SupervisorBookingsScreen(
                   companyCode: companyCode,
-                  supervisorPhone: supervisorPhone,
+                  supervisorPhone: safePhone,
                 ),
               );
             },

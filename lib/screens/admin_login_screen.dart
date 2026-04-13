@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
+import '../services/api_service.dart'; // ✅ إضافة ApiService
 import 'admin_home_screen.dart';
 
 class AdminLoginScreen extends StatefulWidget {
@@ -17,9 +17,6 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
   bool isLoading = false;
   bool obscure = true;
-
-  /// 🔥 رابط السيرفر (غيره حسب السيرفر عندك)
-  final String baseUrl = "http://192.168.1.3:3000/api";
 
   /// 🔐 تسجيل دخول عبر API
   Future<void> login() async {
@@ -38,21 +35,19 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     });
 
     try {
-      final response = await http.post(
-        Uri.parse("$baseUrl/admin/login"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
+      // ✅ استخدام ApiService بدل http مباشر
+      final data = await ApiService.postWithFile(
+        "/admin/login",
+        {
           "password": passwordController.text,
-        }),
+        },
       );
-
-      final data = jsonDecode(response.body);
 
       setState(() {
         isLoading = false;
       });
 
-      if (response.statusCode == 200 && data["success"] == true) {
+      if (data["success"] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("تم تسجيل الدخول بنجاح"),

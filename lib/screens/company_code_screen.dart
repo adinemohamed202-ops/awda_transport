@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 
 import 'company_supervisors_screen.dart';
 import 'company_trips_screen.dart';
+import '../services/api_service.dart';
 
 class CompanyCodeScreen extends StatefulWidget {
   final String companyCode;
@@ -21,23 +21,18 @@ class CompanyCodeScreen extends StatefulWidget {
 }
 
 class _CompanyCodeScreenState extends State<CompanyCodeScreen> {
-
   String companyCode = "";
   String tripsCode = "";
 
   bool loading = true;
 
-  final String baseUrl = "http://192.168.1.3:3000/api";
-
   @override
   void initState() {
     super.initState();
 
-    /// 🔥 نبدأ بالقيم الجاية من الشاشة السابقة
     companyCode = widget.companyCode;
     tripsCode = widget.tripsCode;
 
-    /// 🔥 بعدين نحدثها من السيرفر
     fetchCodes();
   }
 
@@ -46,23 +41,35 @@ class _CompanyCodeScreenState extends State<CompanyCodeScreen> {
   /// ===========================
   Future<void> fetchCodes() async {
     try {
-      final res = await http.get(
-        Uri.parse("$baseUrl/company/codes/$companyCode"),
+      final data = await ApiService.get(
+        "/companies/codes/$companyCode",
       );
 
-      final data = jsonDecode(res.body);
-
-      if (res.statusCode == 200 && data["success"]) {
+      if (data["success"] == true) {
+        if (!mounted) return;
         setState(() {
-          companyCode = data["companyCode"];
-          tripsCode = data["tripsCode"];
+          companyCode = data["companyCode"] ?? companyCode;
+          tripsCode = data["tripsCode"] ?? tripsCode;
           loading = false;
         });
       } else {
-        loading = false;
+        if (!mounted) return;
+        setState(() {
+          loading = false;
+        });
       }
     } catch (e) {
-      loading = false;
+      if (!mounted) return;
+      setState(() {
+        loading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("فشل الاتصال بالسيرفر ❌"),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -93,13 +100,20 @@ class _CompanyCodeScreenState extends State<CompanyCodeScreen> {
       ),
       child: Column(
         children: [
-          Text(title,
-              style: TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
           const SizedBox(height: 8),
-          Text(hint,
-              style: const TextStyle(color: Colors.grey),
-              textAlign: TextAlign.center),
+          Text(
+            hint,
+            style: const TextStyle(color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 15),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -148,7 +162,6 @@ class _CompanyCodeScreenState extends State<CompanyCodeScreen> {
 
   @override
   Widget build(BuildContext context) {
-
     return WillPopScope(
       onWillPop: () => confirmExit(context),
       child: Scaffold(
@@ -177,9 +190,7 @@ class _CompanyCodeScreenState extends State<CompanyCodeScreen> {
                       hint: "أرسل هذا الكود للمشرفين لإضافة رحلات",
                       context: context,
                     ),
-
                     const SizedBox(height: 20),
-
                     buildCodeBox(
                       title: "كود الرحلات",
                       code: tripsCode,
@@ -187,10 +198,8 @@ class _CompanyCodeScreenState extends State<CompanyCodeScreen> {
                       hint: "استخدم هذا الكود لعرض جميع الرحلات",
                       context: context,
                     ),
-
                     const SizedBox(height: 40),
 
-                    /// 👥 المشرفين
                     SizedBox(
                       height: 55,
                       child: ElevatedButton.icon(
@@ -212,7 +221,6 @@ class _CompanyCodeScreenState extends State<CompanyCodeScreen> {
 
                     const SizedBox(height: 15),
 
-                    /// 🚌 الرحلات
                     SizedBox(
                       height: 55,
                       child: ElevatedButton.icon(
@@ -222,8 +230,7 @@ class _CompanyCodeScreenState extends State<CompanyCodeScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  CompanyTripsScreen(
+                              builder: (context) => CompanyTripsScreen(
                                 companyCode: companyCode,
                                 tripsCode: tripsCode,
                               ),

@@ -29,25 +29,21 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  bool isValidUsername(String username) {
-    final regex = RegExp(r'^[a-zA-Z0-9]+$');
-    return regex.hasMatch(username);
-  }
-
   Future<void> login() async {
 
     if (isLoading) return;
 
-    String username = usernameController.text.trim();
+    String phoneInput = usernameController.text.trim();
     String password = passwordController.text.trim();
 
-    if (username.isEmpty || password.isEmpty) {
+    if (phoneInput.isEmpty || password.isEmpty) {
       showMsg("أدخل كل البيانات");
       return;
     }
 
-    if (!isValidUsername(username)) {
-      showMsg("اسم المستخدم يجب أن يكون حروف إنجليزية وأرقام فقط");
+    // ✅ تحقق من الرقم (بدون +)
+    if (!RegExp(r'^[0-9]{9,15}$').hasMatch(phoneInput)) {
+      showMsg("أدخل رقم هاتف صحيح");
       return;
     }
 
@@ -60,13 +56,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
 
-      final response = await ApiService.login(username, password);
+      // 🔥 بدون أي تعديل للرقم هنا
+      final response = await ApiService.login(phoneInput, password);
 
       if (!mounted) return;
 
       if (response["success"] != true) {
         showMsg(response["message"] ?? "فشل تسجيل الدخول");
-        setState(() => isLoading = false);
         return;
       }
 
@@ -78,18 +74,16 @@ class _LoginScreenState extends State<LoginScreen> {
         user = Map<String, dynamic>.from(response["data"]);
       } else {
         showMsg("بيانات المستخدم غير صحيحة");
-        setState(() => isLoading = false);
         return;
       }
 
-      /// 🚫 التحقق من الحظر
+      /// 🚫 الحظر
       if (user["isBlocked"] == true || user["is_blocked"] == true) {
         showMsg("تم حظر حسابك ❌");
-        setState(() => isLoading = false);
         return;
       }
 
-      /// ✅ التحقق من التفعيل
+      /// ✅ التفعيل
       if (user["is_verified"] != true) {
 
         String email = (user["email"] ?? "").toString();
@@ -100,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(
               builder: (_) => VerifyScreen(
                 email: email,
-                username: (user["name"] ?? username).toString(),
+                username: (user["name"] ?? phoneInput).toString(),
               ),
             ),
           );
@@ -108,7 +102,6 @@ class _LoginScreenState extends State<LoginScreen> {
           showMsg("يجب تفعيل الحساب أولاً");
         }
 
-        setState(() => isLoading = false);
         return;
       }
 
@@ -121,7 +114,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (userId.isEmpty || userId == "null") {
         showMsg("فشل تسجيل الدخول");
-        setState(() => isLoading = false);
         return;
       }
 
@@ -133,7 +125,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (token.isEmpty) {
         showMsg("خطأ في التوكن");
-        setState(() => isLoading = false);
         return;
       }
 
@@ -156,7 +147,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       await UserSession.setUser(
         uid: userId,
-        name: (user["name"] ?? username).toString(),
+        name: (user["name"] ?? phoneInput).toString(),
         userEmail: (user["email"] ?? "").toString(),
         wallet: walletId,
         userBalance: balance,
@@ -208,9 +199,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
               TextField(
                 controller: usernameController,
+                keyboardType: TextInputType.phone,
                 decoration: const InputDecoration(
-                  labelText: "اسم المستخدم",
-                  prefixIcon: Icon(Icons.person),
+                  labelText: "رقم الهاتف",
+                  prefixIcon: Icon(Icons.phone),
                 ),
               ),
 
@@ -244,14 +236,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: ElevatedButton(
                   onPressed: login,
                   child: isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
+                      ? const CircularProgressIndicator(color: Colors.white)
                       : const Text("تسجيل الدخول"),
                 ),
               ),

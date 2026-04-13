@@ -1,12 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http;
 
+import '../services/api_service.dart';
 import '../services/wallet_service.dart';
 import '../services/ticket_service.dart';
 import '../utils/user_session.dart';
@@ -29,13 +28,10 @@ class _WalletScreenState extends State<WalletScreen> {
   bool isLoading = false;
   int balance = 0;
 
-  /// 🔳 QR من السيرفر
   String? qrUrl;
   bool loadingQr = true;
 
   final amountController = TextEditingController();
-
-  final String baseUrl = "http://10.0.2.2:3000/api";
 
   @override
   void initState() {
@@ -61,7 +57,6 @@ class _WalletScreenState extends State<WalletScreen> {
     super.dispose();
   }
 
-  /// 🔐 توليد الكود
   void generateCode() {
     int number = 100000 + Random().nextInt(900000);
     setState(() {
@@ -69,7 +64,6 @@ class _WalletScreenState extends State<WalletScreen> {
     });
   }
 
-  /// 💰 جلب الرصيد
   Future<void> loadBalance() async {
     try {
       final b = await WalletService.getBalance(
@@ -83,20 +77,21 @@ class _WalletScreenState extends State<WalletScreen> {
     }
   }
 
-  /// 🔳 جلب QR
+  /// 🔳 تم التعديل هنا
   Future<void> fetchQR() async {
     try {
-      final res = await http.get(Uri.parse("$baseUrl/admin/get-qr"));
 
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
+      final data = await ApiService.post(
+        "/qr",
+        {},
+      );
 
-        if (data["success"] == true) {
-          setState(() {
-            qrUrl = data["qr"];
-          });
-        }
+      if (data["success"] == true) {
+        setState(() {
+          qrUrl = data["qr"];
+        });
       }
+
     } catch (e) {
       showMsg("فشل تحميل QR ❌");
     }
@@ -110,7 +105,6 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  /// 📷 اختيار إيصال
   Future pickImage() async {
     final picked =
         await ImagePicker().pickImage(source: ImageSource.gallery);
@@ -122,7 +116,6 @@ class _WalletScreenState extends State<WalletScreen> {
     }
   }
 
-  /// 💸 إرسال طلب إيداع
   Future sendDeposit() async {
     int amount = int.tryParse(amountController.text) ?? 0;
 
@@ -157,7 +150,6 @@ class _WalletScreenState extends State<WalletScreen> {
     setState(() => isLoading = false);
   }
 
-  /// 🚨 مشكلة إيداع
   Future sendProblem() async {
     if (receiptImage == null) return showMsg("ارفع صورة الإيصال");
 
@@ -230,7 +222,6 @@ class _WalletScreenState extends State<WalletScreen> {
 
                 const SizedBox(height: 20),
 
-                /// 💰 الرصيد
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
@@ -259,7 +250,6 @@ class _WalletScreenState extends State<WalletScreen> {
 
                 const SizedBox(height: 20),
 
-                /// 🔳 QR الحقيقي
                 loadingQr
                     ? const CircularProgressIndicator()
                     : qrUrl != null
@@ -279,7 +269,6 @@ class _WalletScreenState extends State<WalletScreen> {
 
                 const SizedBox(height: 20),
 
-                /// 🔐 الكود
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

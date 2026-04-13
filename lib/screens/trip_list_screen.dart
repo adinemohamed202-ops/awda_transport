@@ -25,6 +25,11 @@ class _TripListScreenState extends State<TripListScreen> {
   List<Map<String, dynamic>> trips = [];
   bool isLoading = true;
 
+  Future<void> refreshTrips() async {
+    setState(() => isLoading = true);
+    await loadTrips();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -32,22 +37,41 @@ class _TripListScreenState extends State<TripListScreen> {
   }
 
   Future loadTrips() async {
-    final data =
-        await ApiService.getTrips(widget.tripType, widget.category);
+    try {
+      final response =
+          await ApiService.getTrips(widget.tripType, widget.category ?? ""); // ✅ الإصلاح هنا
 
-    if (!mounted) return;
+      final data = response is Map ? response["data"] : response;
 
-    setState(() {
-      trips = List<Map<String, dynamic>>.from(
-        data.map((e) => Map<String, dynamic>.from(e)),
-      );
-      isLoading = false;
-    });
+      if (!mounted) return;
+
+      setState(() {
+        if (data is List) {
+          trips = List<Map<String, dynamic>>.from(
+            data.map((e) {
+              final trip = Map<String, dynamic>.from(e);
+
+              trip["id"] ??= trip["tripId"];
+
+              return trip;
+            }),
+          );
+        } else {
+          trips = [];
+        }
+
+        isLoading = false;
+      });
+    } catch (e) {
+      debugPrint("❌ loadTrips error: $e");
+      if (!mounted) return;
+      setState(() => isLoading = false);
+    }
   }
 
   int getRemainingSeats(Map<String, dynamic> trip) {
-    int total = trip["totalSeats"] ?? 0;
-    int booked = trip["bookedSeats"] ?? 0;
+    int total = trip["totalSeats"] ?? trip["seats"] ?? 0;
+    int booked = trip["bookedSeats"] ?? trip["booked"] ?? 0;
     return total - booked;
   }
 
@@ -138,6 +162,11 @@ class _TripListScreenState extends State<TripListScreen> {
   void navigateToSeats(Map<String, dynamic> trip) async {
     if (isNavigating) return;
 
+    if (trip["id"] == null) {
+      debugPrint("❌ trip id is null");
+      return;
+    }
+
     setState(() => isNavigating = true);
 
     try {
@@ -150,6 +179,8 @@ class _TripListScreenState extends State<TripListScreen> {
           ),
         ),
       );
+
+      await loadTrips();
     } catch (e) {
       debugPrint("Navigation error: $e");
     }
@@ -162,10 +193,10 @@ class _TripListScreenState extends State<TripListScreen> {
   @override
   Widget build(BuildContext context) {
     var filtered = trips.where((trip) {
-      if (isTripExpired(trip["tripDate"])) return false;
+      if (isTripExpired(trip["tripDate"] ?? trip["date"])) return false;
 
-      String from = (trip["from"] ?? "").toLowerCase();
-      String to = (trip["to"] ?? "").toLowerCase();
+      String from = (trip["from"] ?? "").toString().toLowerCase();
+      String to = (trip["to"] ?? "").toString().toLowerCase();
 
       if (fromSearch.isNotEmpty && !from.contains(fromSearch)) return false;
       if (toSearch.isNotEmpty && !to.contains(toSearch)) return false;
@@ -199,114 +230,104 @@ class _TripListScreenState extends State<TripListScreen> {
                     child: Text("🚫 لا توجد رحلات متاحة حالياً",
                         style: TextStyle(color: Colors.white)),
                   )
-                : ListView.builder(
-                    itemCount: filtered.length,
-                    itemBuilder: (context, index) {
-                      var trip = filtered[index];
-                      int remaining = getRemainingSeats(trip);
+                : RefreshIndicator(
+                    onRefresh: refreshTrips,
+                    child: ListView.builder(
+                      itemCount: filtered.length,
+                      itemBuilder: (context, index) {
+                        var trip = filtered[index];
+                        int remaining = getRemainingSeats(trip);
 
-                      return GestureDetector(
-                        onTap: () => navigateToSeats(trip),
-                        child: Container(
-                          margin: EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.white24),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(20),
-                            child: BackdropFilter(
-                              filter:
-                                  ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                              child: Container(
-                                padding: EdgeInsets.all(15),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.deepPurple.withOpacity(0.5),
-                                      Colors.blueAccent.withOpacity(0.5),
-                                    ],
-                                  ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    /// الشركة
-                                    Text(
-                                      trip["companyName"] ?? "",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-
-                                    SizedBox(height: 6),
-
-                                    /// المسار
-                                    Text(
-                                      "${trip["from"] ?? ""} ➜ ${trip["to"] ?? ""}",
-                                      style:
-                                          TextStyle(color: Colors.white70),
-                                    ),
-
-                                    SizedBox(height: 6),
-
-                                    /// التاريخ
-                                    Text(
-                                      formatDate(trip["tripDate"]),
-                                      style:
-                                          TextStyle(color: Colors.white54),
-                                    ),
-
-                                    SizedBox(height: 10),
-
-                                    /// السعر + المقاعد
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          "💰 ${trip["price"] ?? 0}",
-                                          style: TextStyle(
-                                              color: Colors.white),
-                                        ),
-                                        Text(
-                                          "🪑 $remaining",
-                                          style: TextStyle(
-                                              color: Colors.white),
-                                        ),
+                        return GestureDetector(
+                          onTap: () => navigateToSeats(trip),
+                          child: Container(
+                            margin: EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.white24),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: BackdropFilter(
+                                filter:
+                                    ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                                child: Container(
+                                  padding: EdgeInsets.all(15),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.deepPurple.withOpacity(0.5),
+                                        Colors.blueAccent.withOpacity(0.5),
                                       ],
                                     ),
-
-                                    SizedBox(height: 12),
-
-                                    /// زر الحجز
-                                    SizedBox(
-                                      width: double.infinity,
-                                      child: ElevatedButton(
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor:
-                                              Colors.deepPurple,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        (trip["companyName"] ?? "").toString(),
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
                                         ),
-                                        onPressed: () =>
-                                            navigateToSeats(trip),
-                                        child: Text("احجز الآن"),
                                       ),
-                                    )
-                                  ],
+                                      SizedBox(height: 6),
+                                      Text(
+                                        "${trip["from"] ?? ""} ➜ ${trip["to"] ?? ""}",
+                                        style:
+                                            TextStyle(color: Colors.white70),
+                                      ),
+                                      SizedBox(height: 6),
+                                      Text(
+                                        formatDate(trip["tripDate"]),
+                                        style:
+                                            TextStyle(color: Colors.white54),
+                                      ),
+                                      SizedBox(height: 10),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            "💰 ${trip["price"] ?? 0}",
+                                            style: TextStyle(
+                                                color: Colors.white),
+                                          ),
+                                          Text(
+                                            "🪑 $remaining",
+                                            style: TextStyle(
+                                                color: Colors.white),
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: 12),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:
+                                                Colors.deepPurple,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                          onPressed: () =>
+                                              navigateToSeats(trip),
+                                          child: Text("احجز الآن"),
+                                        ),
+                                      )
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
       ),
     );

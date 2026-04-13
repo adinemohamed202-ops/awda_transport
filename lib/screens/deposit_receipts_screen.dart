@@ -1,6 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import '../services/api_service.dart';
 
 class DepositReceiptsScreen extends StatefulWidget {
   const DepositReceiptsScreen({super.key});
@@ -16,8 +15,6 @@ class _DepositReceiptsScreenState
   List tickets = [];
   bool isLoading = true;
   bool isError = false;
-
-  final String baseUrl = "http://192.168.1.3:3000/api";
 
   @override
   void initState() {
@@ -35,7 +32,7 @@ class _DepositReceiptsScreenState
     }
   }
 
-  /// 🔥 جلب التذاكر
+  /// 🔥 جلب التذاكر باستخدام API SERVICE
   Future<void> fetchTickets() async {
 
     setState(() {
@@ -45,13 +42,9 @@ class _DepositReceiptsScreenState
 
     try {
 
-      final res = await http.get(
-        Uri.parse("$baseUrl/tickets"),
-      );
+      final data = await ApiService.getTickets();
 
-      final data = res.body.isNotEmpty ? jsonDecode(res.body) : {};
-
-      if (res.statusCode == 200 && data["success"] == true) {
+      if (data["success"] == true) {
 
         /// 🔥 فلترة الإيداع فقط
         List all = data["tickets"] ?? [];

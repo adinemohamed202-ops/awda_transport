@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../utils/user_session.dart';
 import 'supervisor_dashboard_screen.dart';
 
 class SupervisorLoginScreen extends StatefulWidget {
@@ -20,7 +21,6 @@ class _SupervisorLoginScreenState
 
   bool isLoading = false;
 
-  /// 🔥 تسجيل / دخول عبر API
   Future<void> loginOrRegisterSupervisor() async {
 
     final name = nameController.text.trim();
@@ -33,11 +33,12 @@ class _SupervisorLoginScreenState
       return;
     }
 
+    if (!mounted) return;
     setState(() => isLoading = true);
 
     try {
 
-      final response = await ApiService.postWithFile(
+      final response = await ApiService.post(
         "/supervisor/login",
         {
           "name": name,
@@ -47,16 +48,26 @@ class _SupervisorLoginScreenState
         },
       );
 
+      if (!mounted) return;
+
       if (response["success"] != true) {
-        showMsg(response["message"] ?? "❌ خطأ في الدخول");
+        showMsg(response["message"]?.toString() ?? "❌ خطأ في الدخول");
         setState(() => isLoading = false);
         return;
       }
 
-      /// 🔥 نفس المتغيرات
-      String category = response["category"];
-      String companyName = response["companyName"];
-      String tripCode = response["tripCode"];
+      String category = response["category"]?.toString() ?? "";
+      String companyName = response["companyName"]?.toString() ?? "";
+      String tripCode = response["tripCode"]?.toString() ?? "";
+
+      await UserSession.setUser(
+        uid: code,
+        name: name,
+        userEmail: "",
+        wallet: "",
+        userBalance: 0,
+        userToken: response["token"]?.toString() ?? "",
+      );
 
       if (!mounted) return;
 
@@ -76,6 +87,7 @@ class _SupervisorLoginScreenState
       );
 
     } catch (e) {
+      if (!mounted) return;
       showMsg("حدث خطأ ❌");
     }
 

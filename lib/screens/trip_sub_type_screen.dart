@@ -36,7 +36,7 @@ class _TripSubTypeScreenState extends State<TripSubTypeScreen> {
           MaterialPageRoute(
             builder: (_) => TripListScreen(
               tripType: "shipping",
-              category: "shipping",
+              category: "all", // ✅ التعديل هنا
             ),
           ),
         );

@@ -29,8 +29,17 @@ class _SupervisorTripsScreenState
   }
 
   void loadTrips() {
-    // ✅ تعديل الاستدعاء ليوافق تعريف الدالة
-    tripsFuture = ApiService.getCompanyTrips(widget.companyCode);
+    // ✅ تم التصحيح هنا فقط
+    tripsFuture = ApiService.getCompanyTrips(widget.companyCode).then((res) {
+      return res["trips"] ?? res["data"] ?? [];
+    });
+  }
+
+  /// 🔥 حل مشكلة اختلاف ID (مهم جداً)
+  String getTripId(Map trip) {
+    return trip["tripId"]?.toString() ??
+           trip["_id"]?.toString() ??
+           "";
   }
 
   /// 🗑️ حذف الرحلة
@@ -281,7 +290,7 @@ class _SupervisorTripsScreenState
                               style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.orange),
                               onPressed: () =>
-                                  editTrip(trip["_id"], trip, full),
+                                  editTrip(getTripId(trip), trip, full),
                               child: const Text("تعديل"),
                             ),
                           ),
@@ -293,7 +302,7 @@ class _SupervisorTripsScreenState
                               style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.red),
                               onPressed: () =>
-                                  confirmDelete(trip["_id"]),
+                                  confirmDelete(getTripId(trip)),
                               child: const Text("حذف"),
                             ),
                           ),

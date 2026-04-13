@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
+import '../services/api_service.dart';
 
 class AdminQrUploadScreen extends StatefulWidget {
   const AdminQrUploadScreen({super.key});
@@ -19,19 +20,17 @@ class _AdminQrUploadScreenState extends State<AdminQrUploadScreen> {
 
   final picker = ImagePicker();
 
-  /// 🔥 رابط السيرفر
-  final String baseUrl = "http://192.168.1.3:3000/api";
-
   @override
   void initState() {
     super.initState();
     fetchCurrentQR();
   }
 
-  /// 📥 جلب QR الحالي من السيرفر
   Future<void> fetchCurrentQR() async {
     try {
-      final res = await http.get(Uri.parse("$baseUrl/admin/get-qr"));
+      final res = await http.get(
+        Uri.parse("${ApiService.baseUrl}/admin/get-qr"),
+      );
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
@@ -49,7 +48,6 @@ class _AdminQrUploadScreenState extends State<AdminQrUploadScreen> {
     setState(() => loadingQr = false);
   }
 
-  /// 📷 اختيار صورة
   Future<void> pickImage() async {
     try {
       final picked = await picker.pickImage(source: ImageSource.gallery);
@@ -64,7 +62,6 @@ class _AdminQrUploadScreenState extends State<AdminQrUploadScreen> {
     }
   }
 
-  /// 🚀 رفع QR
   Future<void> uploadQR() async {
     if (image == null) {
       showMsg("اختر صورة أولاً");
@@ -74,7 +71,7 @@ class _AdminQrUploadScreenState extends State<AdminQrUploadScreen> {
     setState(() => loading = true);
 
     try {
-      final uri = Uri.parse("$baseUrl/admin/upload-qr");
+      final uri = Uri.parse("${ApiService.baseUrl}/admin/upload-qr");
 
       var request = http.MultipartRequest('POST', uri);
 
@@ -95,7 +92,6 @@ class _AdminQrUploadScreenState extends State<AdminQrUploadScreen> {
             image = null;
           });
 
-          /// 🔄 تحديث QR بعد الرفع
           fetchCurrentQR();
         } else {
           showMsg(data["message"] ?? "فشل الرفع ❌");
@@ -110,7 +106,6 @@ class _AdminQrUploadScreenState extends State<AdminQrUploadScreen> {
     setState(() => loading = false);
   }
 
-  /// 💬 رسالة
   void showMsg(String msg) {
     if (!mounted) return;
 
@@ -130,7 +125,6 @@ class _AdminQrUploadScreenState extends State<AdminQrUploadScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            /// 🔳 QR الحالي
             Align(
               alignment: Alignment.centerRight,
               child: Text(
@@ -156,7 +150,6 @@ class _AdminQrUploadScreenState extends State<AdminQrUploadScreen> {
 
             const SizedBox(height: 30),
 
-            /// 📷 الصورة الجديدة
             if (image != null)
               Column(
                 children: [
@@ -170,7 +163,6 @@ class _AdminQrUploadScreenState extends State<AdminQrUploadScreen> {
                 ],
               ),
 
-            /// اختيار صورة
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -181,7 +173,6 @@ class _AdminQrUploadScreenState extends State<AdminQrUploadScreen> {
 
             const SizedBox(height: 15),
 
-            /// رفع
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(

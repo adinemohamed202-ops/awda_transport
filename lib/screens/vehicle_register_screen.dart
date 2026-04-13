@@ -24,14 +24,12 @@ class _VehicleRegisterScreenState extends State<VehicleRegisterScreen> {
   /// 🔥 API URL
   final String baseUrl = "http://YOUR_SERVER_IP:3000";
 
-  /// 🔥 توليد كود عشوائي
   String generateCode(int length) {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     Random random = Random();
     return List.generate(length, (index) => chars[random.nextInt(chars.length)]).join();
   }
 
-  /// 🔥 تسجيل العربة عبر API
   Future<void> registerVehicle() async {
 
     if (driverNameController.text.isEmpty ||
@@ -51,11 +49,9 @@ class _VehicleRegisterScreenState extends State<VehicleRegisterScreen> {
     setState(() => isLoading = true);
 
     try {
-      // توليد أكواد مؤقتة
       String supervisorCode = "SUP${generateCode(5)}";
       String tripCode = "CARTRP${generateCode(4)}";
 
-      // إرسال البيانات للسيرفر
       final response = await http.post(
         Uri.parse("$baseUrl/vehicles/register"),
         headers: {"Content-Type": "application/json"},
@@ -77,11 +73,16 @@ class _VehicleRegisterScreenState extends State<VehicleRegisterScreen> {
         return;
       }
 
-      // البيانات النهائية من السيرفر (بعد التحقق من التكرار)
+      /// 🔥 القيم من السيرفر
       String finalSupervisorCode = data["supervisorCode"];
       String finalTripCode = data["tripCode"];
 
-      // فتح صفحة الأكواد
+      /// 🔥 توحيد ID (بدون كسر النظام)
+      String vehicleId =
+          data["id"]?.toString() ??
+          data["vehicleId"]?.toString() ??
+          finalTripCode;
+
       Navigator.push(
         context,
         MaterialPageRoute(

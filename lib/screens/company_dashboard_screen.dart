@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import '../services/api_service.dart';
 
 class CompanyDashboardScreen extends StatefulWidget {
   final String companyCode;
@@ -20,8 +21,6 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
   List trips = [];
   bool isLoading = true;
 
-  final String baseUrl = "http://192.168.1.3:3000/api";
-
   @override
   void initState() {
     super.initState();
@@ -31,7 +30,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
   Future<void> fetchTrips() async {
     try {
       final response = await http.get(
-        Uri.parse("$baseUrl/company/trips?companyCode=${widget.companyCode}"),
+        Uri.parse(Api.getCompanyTrips(widget.companyCode)),
       ).timeout(const Duration(seconds: 15));
 
       final data = jsonDecode(response.body);

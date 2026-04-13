@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import '../services/api_service.dart';
 
 class BuyCreditScreen extends StatefulWidget {
   const BuyCreditScreen({super.key});
@@ -16,9 +16,6 @@ class _BuyCreditScreenState extends State<BuyCreditScreen> {
   String verificationCode = "";
   bool loading = true;
 
-  /// 🔥 رابط السيرفر
-  final String baseUrl = "http://192.168.1.3:3000/api";
-
   @override
   void initState() {
     super.initState();
@@ -28,13 +25,11 @@ class _BuyCreditScreenState extends State<BuyCreditScreen> {
   /// 🔑 جلب كود التحقق من السيرفر
   Future<void> generateCode() async {
     try {
-      final response = await http.get(
-        Uri.parse("$baseUrl/topup/code"),
+      final data = await ApiService.get(
+        "/api/topup/code",
       );
 
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && data["success"] == true) {
+      if (data["success"] == true) {
         setState(() {
           verificationCode = data["code"];
           loading = false;
@@ -58,19 +53,16 @@ class _BuyCreditScreenState extends State<BuyCreditScreen> {
     }
 
     try {
-      final response = await http.post(
-        Uri.parse("$baseUrl/topup/request"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
+      final data = await ApiService.post(
+        "/api/topup/request",
+        {
           "amount": int.parse(amountController.text),
           "walletNumber": walletController.text,
           "code": verificationCode,
-        }),
+        },
       );
 
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && data["success"] == true) {
+      if (data["success"] == true) {
         showMsg("تم إرسال الطلب للمراجعة ✅");
 
         amountController.clear();

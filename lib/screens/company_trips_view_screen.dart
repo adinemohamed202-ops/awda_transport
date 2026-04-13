@@ -1,6 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import '../services/api_service.dart';
 
 class CompanyTripsViewScreen extends StatefulWidget {
   const CompanyTripsViewScreen({super.key});
@@ -18,9 +17,7 @@ class _CompanyTripsViewScreenState extends State<CompanyTripsViewScreen> {
   bool isError = false;
   bool showTrips = false;
 
-  final String baseUrl = "http://192.168.1.3:3000/api";
-
-  /// 🔍 البحث عن الرحلات
+  /// 🔍 البحث عن الرحلات باستخدام API SERVICE
   Future<void> searchTrips() async {
 
     final code = tripsCodeController.text.trim();
@@ -39,13 +36,9 @@ class _CompanyTripsViewScreenState extends State<CompanyTripsViewScreen> {
 
     try {
 
-      final res = await http.get(
-        Uri.parse("$baseUrl/trips?tripsCode=$code"),
-      );
+      final data = await ApiService.getTrips(code);
 
-      final data = res.body.isNotEmpty ? jsonDecode(res.body) : {};
-
-      if (res.statusCode == 200 && data["success"] == true) {
+      if (data["success"] == true) {
 
         setState(() {
           trips = data["trips"] ?? [];
@@ -153,8 +146,7 @@ class _CompanyTripsViewScreenState extends State<CompanyTripsViewScreen> {
                             : RefreshIndicator(
                                 onRefresh: searchTrips,
                                 child: ListView.builder(
-                                  physics:
-                                      const AlwaysScrollableScrollPhysics(),
+                                  physics: const AlwaysScrollableScrollPhysics(),
                                   itemCount: trips.length,
                                   itemBuilder: (context, index) {
 
@@ -184,8 +176,7 @@ class _CompanyTripsViewScreenState extends State<CompanyTripsViewScreen> {
                                         ),
 
                                         subtitle: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
 
                                             const SizedBox(height: 5),

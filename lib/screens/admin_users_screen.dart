@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import '../services/api_service.dart';
 
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({Key? key}) : super(key: key);
@@ -10,8 +10,6 @@ class AdminUsersScreen extends StatefulWidget {
 }
 
 class _AdminUsersScreenState extends State<AdminUsersScreen> {
-
-  final String baseUrl = "http://192.168.1.3:3000";
 
   List users = [];
   List filteredUsers = [];
@@ -36,13 +34,10 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   Future<void> fetchUsers() async {
     try {
-      final res = await http.post(
-        Uri.parse("$baseUrl/admin/search-users"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({}),
+      final data = await ApiService.post(
+        "/admin/search-users",
+        {},
       );
-
-      final data = jsonDecode(res.body);
 
       if (data["success"] == true) {
         setState(() {
@@ -82,13 +77,10 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         return;
       }
 
-      final res = await http.post(
-        Uri.parse("$baseUrl/admin/search-users"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(body),
+      final data = await ApiService.post(
+        "/admin/search-users",
+        body,
       );
-
-      final data = jsonDecode(res.body);
 
       if (data["success"] == true) {
         setState(() {
@@ -105,16 +97,13 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   Future<void> toggleBlock(String userId, bool currentState) async {
     try {
-      final res = await http.post(
-        Uri.parse("$baseUrl/admin/users/block"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
+      final data = await ApiService.post(
+        "/admin/users/block",
+        {
           "userId": userId,
           "block": !currentState,
-        }),
+        },
       );
-
-      final data = jsonDecode(res.body);
 
       if (data["success"] == true) {
         showMsg(!currentState ? "تم الحظر 🚫" : "تم فك الحظر ✅");
@@ -154,7 +143,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   Widget buildUserCard(Map user) {
 
-    // ✅ التعديل هنا فقط
     bool isBlocked = user["isblocked"] ?? false;
 
     return Card(

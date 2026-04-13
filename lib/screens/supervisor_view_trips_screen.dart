@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-
+import '../services/api_service.dart';
 import 'chat_screen.dart';
 
 class SupervisorBookingsScreen extends StatefulWidget {
@@ -35,21 +33,18 @@ class _SupervisorBookingsScreenState
   /// 🔥 جلب الطلبات
   Future<void> fetchBookings() async {
     try {
-      final response = await http.get(
-        Uri.parse(
-            'http://192.168.1.3:3000/bookings?companyCode=${widget.companyCode}&phone=${widget.supervisorPhone}'),
+
+      final data = await ApiService.getSupervisorBookings(
+        widget.companyCode,
+        widget.supervisorPhone,
       );
 
-      if (response.statusCode == 200) {
-        setState(() {
-          bookings = jsonDecode(response.body);
-          isLoading = false;
-        });
-      } else {
-        setState(() => isLoading = false);
-      }
+      setState(() {
+        bookings = data;
+        isLoading = false;
+      });
+
     } catch (e) {
-      print("Error: $e");
       setState(() => isLoading = false);
     }
   }
@@ -59,20 +54,16 @@ class _SupervisorBookingsScreenState
     setState(() => loadingId = id);
 
     try {
-      final response = await http.post(
-        Uri.parse('http://192.168.1.3:3000/bookings/accept'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({"bookingId": id}),
-      );
 
-      final data = jsonDecode(response.body);
+      final res = await ApiService.acceptBooking(id);
 
-      if (response.statusCode == 200) {
+      if (res["success"] == true) {
         showMsg("تم القبول ✅");
         fetchBookings();
       } else {
-        showMsg(data["message"] ?? "فشل ❌");
+        showMsg(res["message"] ?? "فشل ❌");
       }
+
     } catch (e) {
       showMsg("خطأ في الاتصال ❌");
     }
@@ -85,16 +76,16 @@ class _SupervisorBookingsScreenState
     setState(() => loadingId = id);
 
     try {
-      final response = await http.post(
-        Uri.parse('http://192.168.1.3:3000/bookings/reject'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({"bookingId": id}),
-      );
 
-      if (response.statusCode == 200) {
+      final res = await ApiService.rejectBooking(id);
+
+      if (res["success"] == true) {
         showMsg("تم الرفض ❌");
         fetchBookings();
+      } else {
+        showMsg(res["message"] ?? "فشك ❌");
       }
+
     } catch (e) {
       showMsg("خطأ ❌");
     }

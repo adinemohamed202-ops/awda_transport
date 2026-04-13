@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../services/api_service.dart';
 
 class CompanyListScreen extends StatefulWidget {
   const CompanyListScreen({super.key});
@@ -14,8 +15,6 @@ class _CompanyListScreenState extends State<CompanyListScreen> {
   List companies = [];
   bool isLoading = true;
   bool isError = false;
-
-  final String baseUrl = "http://192.168.1.3:3000/api";
 
   @override
   void initState() {
@@ -34,7 +33,7 @@ class _CompanyListScreenState extends State<CompanyListScreen> {
     try {
 
       final res = await http.get(
-        Uri.parse("$baseUrl/companies"),
+        Uri.parse(ApiService.getCompanies()),
       );
 
       final data = res.body.isNotEmpty ? jsonDecode(res.body) : {};

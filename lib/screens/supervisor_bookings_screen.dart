@@ -1,9 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'chat_screen.dart';
+
+import '../services/api_service.dart';
 
 class SupervisorBookingsScreen extends StatefulWidget {
   final String companyCode;
@@ -21,7 +21,6 @@ class SupervisorBookingsScreen extends StatefulWidget {
 }
 
 class _SupervisorBookingsScreenState extends State<SupervisorBookingsScreen> {
-  final String baseUrl = "http://YOUR_SERVER_IP:3000";
 
   String loadingId = "";
   Set<String> seenIds = {};
@@ -48,28 +47,33 @@ class _SupervisorBookingsScreenState extends State<SupervisorBookingsScreen> {
 
   Future<void> fetchBookings() async {
     try {
-      final response = await http.get(Uri.parse(
-          "$baseUrl/booking_requests?companyCode=${widget.companyCode}&supervisorPhone=${widget.supervisorPhone}"));
+      // ✅ تم تصحيح الاستدعاء (معامل واحد فقط)
+      final response = await ApiService.get(
+        "/booking_requests?companyCode=${widget.companyCode}&supervisorPhone=${widget.supervisorPhone}",
+      );
 
-      if (response.statusCode == 200) {
-        final List data = jsonDecode(response.body);
-
-        if (!isFirstLoad) {
-          for (var booking in data) {
-            if (!seenIds.contains(booking["id"])) {
-              seenIds.add(booking["id"]);
-              onNewBooking();
-            }
-          }
-        } else {
-          seenIds = data.map((e) => e["id"].toString()).toSet();
-          isFirstLoad = false;
-        }
-
-        setState(() => bookings = List<Map<String, dynamic>>.from(data));
-      } else {
+      if (response == null) {
         showMsg("❌ فشل جلب الطلبات");
+        return;
       }
+
+      // ✅ تم تصحيح نوع البيانات
+      final List data = response["data"] ?? [];
+
+      if (!isFirstLoad) {
+        for (var booking in data) {
+          if (!seenIds.contains(booking["id"].toString())) {
+            seenIds.add(booking["id"].toString());
+            onNewBooking();
+          }
+        }
+      } else {
+        seenIds = data.map((e) => e["id"].toString()).toSet();
+        isFirstLoad = false;
+      }
+
+      setState(() => bookings = List<Map<String, dynamic>>.from(data));
+
     } catch (e) {
       showMsg("❌ تأكد من الاتصال بالسيرفر");
     }
@@ -77,43 +81,51 @@ class _SupervisorBookingsScreenState extends State<SupervisorBookingsScreen> {
 
   Future<void> acceptBooking(String id, Map booking) async {
     setState(() => loadingId = id);
+
     try {
-      final response = await http.post(
-        Uri.parse("$baseUrl/booking_requests/accept"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"id": id}),
+      final response = await ApiService.post(
+        "/booking_requests/accept",
+        {
+          "id": id,
+        },
       );
 
-      if (response.statusCode == 200) {
+      if (response == null || response["success"] == false) {
+        showMsg("❌ خطأ في القبول");
+      } else {
         showMsg("تم القبول ✅");
         fetchBookings();
-      } else {
-        showMsg("❌ خطأ في القبول");
       }
+
     } catch (e) {
       showMsg("❌ تأكد من الاتصال بالسيرفر");
     }
+
     setState(() => loadingId = "");
   }
 
   Future<void> rejectBooking(String id) async {
     setState(() => loadingId = id);
+
     try {
-      final response = await http.post(
-        Uri.parse("$baseUrl/booking_requests/reject"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"id": id}),
+      final response = await ApiService.post(
+        "/booking_requests/reject",
+        {
+          "id": id,
+        },
       );
 
-      if (response.statusCode == 200) {
+      if (response == null || response["success"] == false) {
+        showMsg("❌ خطأ في الرفض");
+      } else {
         showMsg("تم رفض الطلب ❌");
         fetchBookings();
-      } else {
-        showMsg("❌ خطأ في الرفض");
       }
+
     } catch (e) {
       showMsg("❌ تأكد من الاتصال بالسيرفر");
     }
+
     setState(() => loadingId = "");
   }
 
@@ -126,7 +138,6 @@ class _SupervisorBookingsScreenState extends State<SupervisorBookingsScreen> {
     String chatId = booking["chatId"] ?? "";
     bool isLoading = loadingId == booking["id"];
 
-    /// ✅ إضافة القيم المطلوبة
     String tripId = booking["tripId"]?.toString() ?? "";
     String bookingId = booking["id"]?.toString() ?? "";
 

@@ -3,8 +3,13 @@ import 'trip_results_screen.dart';
 
 class TripSearchScreen extends StatefulWidget {
   final String tripType;
+  final String category; // ✅ إضافة
 
-  const TripSearchScreen({super.key, required this.tripType});
+  const TripSearchScreen({
+    super.key,
+    required this.tripType,
+    required this.category, // ✅ إضافة
+  });
 
   @override
   State<TripSearchScreen> createState() => _TripSearchScreenState();
@@ -23,7 +28,6 @@ class _TripSearchScreenState extends State<TripSearchScreen> {
       appBar: AppBar(
         title: const Text("بحث عن رحلة"),
         actions: [
-          // ثلاث نقاط لفتح شريط البحث
           IconButton(
             icon: const Icon(Icons.more_vert),
             onPressed: () {
@@ -40,12 +44,10 @@ class _TripSearchScreenState extends State<TripSearchScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // عرض البحث عند الضغط على الثلاث نقاط
               if (isSearchVisible)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // حقل من
                     TextField(
                       controller: fromController,
                       decoration: const InputDecoration(
@@ -56,7 +58,6 @@ class _TripSearchScreenState extends State<TripSearchScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // حقل إلى
                     TextField(
                       controller: toController,
                       decoration: const InputDecoration(
@@ -67,7 +68,6 @@ class _TripSearchScreenState extends State<TripSearchScreen> {
                     ),
                     const SizedBox(height: 30),
 
-                    // اختيار وسيلة النقل
                     const Text(
                       "اختر وسيلة النقل",
                       style: TextStyle(
@@ -75,6 +75,7 @@ class _TripSearchScreenState extends State<TripSearchScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+
                     RadioListTile(
                       title: const Text("✈️ طائرة"),
                       value: "plane",
@@ -115,9 +116,9 @@ class _TripSearchScreenState extends State<TripSearchScreen> {
                         });
                       },
                     ),
+
                     const SizedBox(height: 30),
 
-                    // زر البحث
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -130,6 +131,7 @@ class _TripSearchScreenState extends State<TripSearchScreen> {
                             );
                             return;
                           }
+
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -138,6 +140,7 @@ class _TripSearchScreenState extends State<TripSearchScreen> {
                                 to: toController.text,
                                 transport: transportType!,
                                 tripType: widget.tripType,
+                                category: widget.category, // ✅ إضافة
                               ),
                             ),
                           );

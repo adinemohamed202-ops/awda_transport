@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 // الشاشات
 import 'supervisor_register_screen.dart';
 import 'supervisor_login_screen.dart';
+import 'supervisor_dashboard_screen.dart';
+
+import '../utils/user_session.dart'; // 🔥 إضافة
 
 class SupervisorScreen extends StatelessWidget {
   const SupervisorScreen({super.key});
@@ -16,7 +19,29 @@ class SupervisorScreen extends StatelessWidget {
     );
   }
 
-  /// 💎 زر Glass احترافي
+  /// 🔥 فحص تسجيل مسبق (Auto Login)
+  void checkLogin(BuildContext context) {
+    final user = UserSession.user;
+
+    if (user != null && user["type"] == "supervisor") {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SupervisorDashboardScreen(
+            companyName: user["companyName"] ?? "",
+            supervisorName: user["name"] ?? "",
+            officeLocation: user["office"] ?? "",
+            companyCode: user["companyCode"] ?? "",
+            tripCode: user["tripCode"] ?? "",
+            category: user["category"] ?? "company",
+            supervisorPhone: user["phone"] ?? "",
+          ),
+        ),
+      );
+    }
+  }
+
+  /// 💎 زر Glass
   Widget buildButton({
     required BuildContext context,
     required IconData icon,
@@ -48,7 +73,6 @@ class SupervisorScreen extends StatelessWidget {
               children: [
                 const SizedBox(width: 10),
 
-                /// 🔥 أيقونة
                 CircleAvatar(
                   radius: 26,
                   backgroundColor: Colors.deepPurple,
@@ -57,7 +81,6 @@ class SupervisorScreen extends StatelessWidget {
 
                 const SizedBox(width: 15),
 
-                /// 🔥 النص
                 Expanded(
                   child: Text(
                     title,
@@ -84,6 +107,9 @@ class SupervisorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
 
+    /// 🔥 أهم سطر (تشغيل Auto Login)
+    Future.microtask(() => checkLogin(context));
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -101,7 +127,6 @@ class SupervisorScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             children: [
 
-              /// 🔙 رجوع
               IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
                 onPressed: () => Navigator.pop(context),
@@ -109,7 +134,6 @@ class SupervisorScreen extends StatelessWidget {
 
               const SizedBox(height: 10),
 
-              /// 🧑‍✈️ العنوان
               const Text(
                 "لوحة المشرف",
                 style: TextStyle(
@@ -131,7 +155,6 @@ class SupervisorScreen extends StatelessWidget {
 
               const SizedBox(height: 30),
 
-              /// 📝 تسجيل
               buildButton(
                 context: context,
                 icon: Icons.app_registration,
@@ -141,7 +164,6 @@ class SupervisorScreen extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              /// 🔐 دخول
               buildButton(
                 context: context,
                 icon: Icons.login,
@@ -151,7 +173,6 @@ class SupervisorScreen extends StatelessWidget {
 
               const SizedBox(height: 40),
 
-              /// 💡 ملاحظة
               const Center(
                 child: Text(
                   "إذا لم يكن لديك حساب، قم بالتسجيل أولاً",

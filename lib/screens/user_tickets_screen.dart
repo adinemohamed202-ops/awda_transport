@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import '../services/api_service.dart';
 
 class UserTicketsScreen extends StatefulWidget {
   final String userPhone;
@@ -22,24 +21,18 @@ class _UserTicketsScreenState extends State<UserTicketsScreen> {
     fetchTickets();
   }
 
-  /// 🔥 جلب التذاكر من السيرفر
+  /// 🔥 جلب التذاكر
   Future<void> fetchTickets() async {
     try {
-      final response = await http.get(
-        Uri.parse('http://192.168.1.3:3000/tickets/${widget.userPhone}'),
-      );
 
-      if (response.statusCode == 200) {
-        setState(() {
-          tickets = jsonDecode(response.body);
-          isLoading = false;
-        });
-      } else {
-        setState(() => isLoading = false);
-      }
+      final data = await ApiService.getUserTickets(widget.userPhone);
+
+      setState(() {
+        tickets = data;
+        isLoading = false;
+      });
 
     } catch (e) {
-      print("Error: $e");
       setState(() => isLoading = false);
     }
   }

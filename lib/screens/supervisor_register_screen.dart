@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-
+import '../services/api_service.dart';
 import 'supervisor_dashboard_screen.dart';
 
 class SupervisorRegisterScreen extends StatefulWidget {
@@ -22,7 +20,7 @@ class _SupervisorRegisterScreenState
 
   bool isLoading = false;
 
-  /// 🔥 تسجيل عبر API
+  /// 🔥 تسجيل عبر API SERVICE
   Future<void> registerSupervisor() async {
 
     final name = nameController.text.trim();
@@ -39,20 +37,14 @@ class _SupervisorRegisterScreenState
 
     try {
 
-      final response = await http.post(
-        Uri.parse('http://192.168.1.3:3000/supervisors/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          "name": name,
-          "office": office,
-          "phone": phone,
-          "companyCode": code,
-        }),
+      final data = await ApiService.registerSupervisor(
+        name: name,
+        office: office,
+        phone: phone,
+        companyCode: code,
       );
 
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200) {
+      if (data["success"] == true) {
 
         String companyName = data["companyName"] ?? "";
         String tripCode = data["tripCode"] ?? "";

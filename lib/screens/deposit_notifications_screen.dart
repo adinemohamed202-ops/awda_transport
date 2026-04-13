@@ -1,6 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import '../services/api_service.dart';
 
 class DepositNotificationsScreen extends StatefulWidget {
   const DepositNotificationsScreen({super.key});
@@ -17,15 +16,13 @@ class _DepositNotificationsScreenState
   bool isLoading = true;
   bool isError = false;
 
-  final String baseUrl = "http://192.168.1.3:3000/api";
-
   @override
   void initState() {
     super.initState();
     fetchRequests();
   }
 
-  /// 🔥 جلب إشعارات الإيداع
+  /// 🔥 جلب إشعارات الإيداع باستخدام API SERVICE
   Future<void> fetchRequests() async {
 
     setState(() {
@@ -35,13 +32,9 @@ class _DepositNotificationsScreenState
 
     try {
 
-      final res = await http.get(
-        Uri.parse("$baseUrl/topup-requests"),
-      );
+      final data = await ApiService.getTopupRequests();
 
-      final data = res.body.isNotEmpty ? jsonDecode(res.body) : {};
-
-      if (res.statusCode == 200 && data["success"] == true) {
+      if (data["success"] == true) {
 
         setState(() {
           requests = data["requests"] ?? [];

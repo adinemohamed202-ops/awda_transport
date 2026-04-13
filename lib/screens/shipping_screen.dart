@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-
+import '../services/api_service.dart';
 import 'chat_screen.dart';
 
 class ShippingScreen extends StatefulWidget {
@@ -26,23 +24,18 @@ class _ShippingScreenState extends State<ShippingScreen> {
     fetchTrips();
   }
 
-  /// 🔥 جلب الرحلات من API
+  /// 🔥 جلب الرحلات باستخدام API SERVICE
   Future<void> fetchTrips() async {
     try {
-      final response =
-          await http.get(Uri.parse("http://192.168.1.3:3000/shipping"));
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+      final data = await ApiService.getShippingTrips();
 
-        setState(() {
-          allAds = data;
-          filteredAds = data;
-          isLoading = false;
-        });
-      } else {
-        setState(() => isLoading = false);
-      }
+      setState(() {
+        allAds = data ?? [];
+        filteredAds = data ?? [];
+        isLoading = false;
+      });
+
     } catch (e) {
       debugPrint("Error: $e");
       setState(() => isLoading = false);
@@ -101,23 +94,19 @@ class _ShippingScreenState extends State<ShippingScreen> {
     );
   }
 
-  /// 🔥 إنشاء الشات عبر API
+  /// 🔥 إنشاء الشات باستخدام API SERVICE
   Future<String?> createChat(String tripId) async {
     try {
-      final response = await http.post(
-        Uri.parse("http://192.168.1.3:3000/chat/create"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"tripId": tripId}),
-      );
 
-      final data = jsonDecode(response.body);
+      final data = await ApiService.createChat(tripId);
 
-      if (response.statusCode == 200) {
+      if (data["success"] == true) {
         return data["chatId"];
       } else {
         showMsg(data["message"] ?? "فشل إنشاء الشات");
         return null;
       }
+
     } catch (e) {
       showMsg("خطأ في الاتصال");
       return null;
@@ -172,74 +161,77 @@ class _ShippingScreenState extends State<ShippingScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : filteredAds.isEmpty
                     ? const Center(child: Text("لا توجد إعلانات"))
-                    : ListView.builder(
-                        itemCount: filteredAds.length,
-                        itemBuilder: (context, index) {
-                          final ad = filteredAds[index];
+                    : RefreshIndicator(
+                        onRefresh: fetchTrips,
+                        child: ListView.builder(
+                          itemCount: filteredAds.length,
+                          itemBuilder: (context, index) {
+                            final ad = filteredAds[index];
 
-                          return Card(
-                            margin: const EdgeInsets.all(10),
-                            elevation: 3,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(15),
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    ad["companyName"] ?? "",
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 5),
-
-                                  Text("المشرف: ${ad["supervisorName"]}"),
-                                  Text("المكتب: ${ad["officeLocation"]}"),
-
-                                  const SizedBox(height: 6),
-
-                                  Text("${ad["from"]} ➜ ${ad["to"]}"),
-                                  Text("المركبة: ${ad["vehicle"]}"),
-                                  Text("السعر: ${ad["price"]} كريت"),
-
-                                  const SizedBox(height: 10),
-
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton(
-                                      onPressed: () async {
-
-                                        final chatId =
-                                            await createChat(ad["id"]);
-
-                                        if (chatId == null) return;
-
-                                        if (!mounted) return;
-
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => ChatScreen(
-                                              chatId: chatId,
-                                              userType: "user",
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      child: const Text("تواصل"),
-                                    ),
-                                  ),
-                                ],
+                            return Card(
+                              margin: const EdgeInsets.all(10),
+                              elevation: 3,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                            ),
-                          );
-                        },
+                              child: Padding(
+                                padding: const EdgeInsets.all(15),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      ad["companyName"] ?? "",
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 5),
+
+                                    Text("المشرف: ${ad["supervisorName"]}"),
+                                    Text("المكتب: ${ad["officeLocation"]}"),
+
+                                    const SizedBox(height: 6),
+
+                                    Text("${ad["from"]} ➜ ${ad["to"]}"),
+                                    Text("المركبة: ${ad["vehicle"]}"),
+                                    Text("السعر: ${ad["price"]} كريت"),
+
+                                    const SizedBox(height: 10),
+
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton(
+                                        onPressed: () async {
+
+                                          final chatId =
+                                              await createChat(ad["id"]);
+
+                                          if (chatId == null) return;
+
+                                          if (!mounted) return;
+
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => ChatScreen(
+                                                chatId: chatId,
+                                                userType: "user",
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        child: const Text("تواصل"),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ),
           ),
         ],

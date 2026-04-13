@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // 🔥 جديد
+import 'package:flutter/services.dart';
 
 import '../services/api_service.dart';
 import 'verify_screen.dart';
@@ -22,6 +22,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool isLoading = false;
   bool obscurePassword = true;
 
+  String countryCode = "+249";
+
   @override
   void dispose() {
     usernameController.dispose();
@@ -32,9 +34,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  /// ✅ تحقق username
+  /// ✅ username: حروف صغيرة + أرقام
   bool isValidUsername(String username) {
-    final regex = RegExp(r'^[a-zA-Z0-9]+$');
+    final regex = RegExp(r'^[a-z0-9]{3,20}$');
     return regex.hasMatch(username);
   }
 
@@ -55,12 +57,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     if (!isValidUsername(username)) {
-      showMsg("اسم المستخدم يجب أن يكون حروف إنجليزية وأرقام فقط بدون مسافات");
+      showMsg("اسم المستخدم (3-20) حروف إنجليزية صغيرة وأرقام فقط");
       return;
     }
 
-    if (!RegExp(r'^\d{8,15}$').hasMatch(phone)) {
+    if (!RegExp(r'^\d{9,15}$').hasMatch(phone)) {
       showMsg("رقم الهاتف غير صحيح");
+      return;
+    }
+
+    /// ❌ منع إدخال 0 في البداية
+    if (phone.startsWith("0")) {
+      showMsg("لا تكتب 0 في بداية الرقم");
       return;
     }
 
@@ -79,15 +87,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
+    /// ✅ تحويل الرقم للصيغة الدولية (نفس اللوقن)
+    String fullPhone = countryCode + phone;
+
     setState(() => isLoading = true);
 
     try {
 
       final response = await ApiService.register(
-        username,
-        phone,
-        email,
-        password,
+        username: username,
+        email: email,
+        password: password,
+        phone: fullPhone,
       );
 
       if (!mounted) return;
@@ -113,10 +124,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } catch (e) {
       if (!mounted) return;
       showMsg("خطأ في الاتصال بالسيرفر");
-    }
-
-    if (mounted) {
-      setState(() => isLoading = false);
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
@@ -147,7 +158,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 TextField(
                   controller: usernameController,
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')), // 🔥 يمنع المسافات
+                    FilteringTextInputFormatter.allow(RegExp(r'[a-z0-9]')),
                   ],
                   decoration: const InputDecoration(
                     labelText: "اسم المستخدم",
@@ -157,13 +168,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                 const SizedBox(height: 15),
 
-                TextField(
-                  controller: phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: "رقم الهاتف",
-                    prefixIcon: Icon(Icons.phone),
-                  ),
+                Row(
+                  children: [
+
+                    DropdownButton<String>(
+                      value: countryCode,
+                      items: const [
+                        DropdownMenuItem(value: "+249", child: Text("🇸🇩 +249")),
+                        DropdownMenuItem(value: "+20", child: Text("🇪🇬 +20")),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          countryCode = value!;
+                        });
+                      },
+                    ),
+
+                    const SizedBox(width: 10),
+
+                    Expanded(
+                      child: TextField(
+                        controller: phoneController,
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        decoration: const InputDecoration(
+                          labelText: "رقم الهاتف بدون 0",
+                          prefixIcon: Icon(Icons.phone),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 15),

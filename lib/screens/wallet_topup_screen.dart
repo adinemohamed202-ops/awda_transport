@@ -24,6 +24,8 @@ class _WalletTopUpScreenState extends State<WalletTopUpScreen> {
   final TextEditingController amountController = TextEditingController();
   final TextEditingController commentController = TextEditingController();
 
+  final int userId = 1;
+
   @override
   void initState() {
     super.initState();
@@ -96,7 +98,15 @@ class _WalletTopUpScreenState extends State<WalletTopUpScreen> {
 
     if (confirm != true) return;
 
-    // 🔥 تحويل النوع إذا كان مخزن Map
+    try {
+      await WalletService.topUpRequest(
+        userId: userId,
+        amount: amount,
+        code: dynamicCode,
+        comment: comment,
+      );
+    } catch (e) {}
+
     WalletService.balance += amount;
 
     WalletService.transactions.add(

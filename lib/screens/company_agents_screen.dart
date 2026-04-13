@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import '../services/api_service.dart';
 
 class CompanyAgentsScreen extends StatefulWidget {
   final String companyCode;
@@ -25,8 +25,6 @@ class _CompanyAgentsScreenState extends State<CompanyAgentsScreen> {
 
   List supervisors = [];
 
-  final String baseUrl = "http://192.168.1.3:3000/api";
-
   @override
   void initState() {
     super.initState();
@@ -38,13 +36,11 @@ class _CompanyAgentsScreenState extends State<CompanyAgentsScreen> {
   /// ===========================
   Future<void> fetchSupervisors() async {
     try {
-      final res = await http.get(
-        Uri.parse("$baseUrl/supervisors/${widget.companyCode}"),
+      final data = await ApiService.get(
+        "/api/supervisors/${widget.companyCode}",
       );
 
-      final data = jsonDecode(res.body);
-
-      if (res.statusCode == 200 && data["success"]) {
+      if (data["success"]) {
         setState(() {
           supervisors = data["supervisors"];
           loadingList = false;
@@ -73,20 +69,17 @@ class _CompanyAgentsScreenState extends State<CompanyAgentsScreen> {
     setState(() => isLoading = true);
 
     try {
-      final res = await http.post(
-        Uri.parse("$baseUrl/supervisors/add"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
+      final data = await ApiService.post(
+        "/api/supervisors/add",
+        {
           "name": nameController.text.trim(),
           "phone": phoneController.text.trim(),
           "office": officeController.text.trim(),
           "companyCode": widget.companyCode,
-        }),
+        },
       );
 
-      final data = jsonDecode(res.body);
-
-      if (res.statusCode == 200 && data["success"]) {
+      if (data["success"]) {
         clear();
         fetchSupervisors();
         showMsg("تمت إضافة المشرف ✅");
@@ -106,11 +99,10 @@ class _CompanyAgentsScreenState extends State<CompanyAgentsScreen> {
   /// ===========================
   Future<void> deleteSupervisor(String id) async {
     try {
-      final res = await http.delete(
-        Uri.parse("$baseUrl/supervisors/delete/$id"),
+      final data = await ApiService.delete(
+        "/api/supervisors/delete/$id",
+        {}, // ✅ تم إصلاح الخطأ هنا
       );
-
-      final data = jsonDecode(res.body);
 
       if (data["success"]) {
         fetchSupervisors();
@@ -244,7 +236,7 @@ class _CompanyAgentsScreenState extends State<CompanyAgentsScreen> {
 
                           trailing: IconButton(
                             icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => deleteSupervisor(data["id"]),
+                            onPressed: () => deleteSupervisor(data["id"].toString()),
                           ),
                         ),
                       );

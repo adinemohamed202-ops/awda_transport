@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:math';
-import 'package:http/http.dart' as http;
+
+import '../services/api_service.dart';
 
 class SupervisorAddTripScreen extends StatefulWidget {
   final String companyName;
@@ -44,8 +45,6 @@ class _SupervisorAddTripScreenState extends State<SupervisorAddTripScreen> {
   String? vehicleType;
   bool isLoading = false;
 
-  final String baseUrl = "http://YOUR_SERVER_IP:3000";
-
   List generateSeats(int total) {
     return List.generate(total, (index) => {"seat": index + 1, "booked": false});
   }
@@ -70,14 +69,13 @@ class _SupervisorAddTripScreenState extends State<SupervisorAddTripScreen> {
     setState(() => isLoading = true);
 
     try {
-      String tripId = "TRIP${Random().nextInt(999999)}"; // ID عشوائي
+      String tripId = "TRIP${Random().nextInt(999999)}";
 
       List seatsList = generateSeats(seats);
 
-      final response = await http.post(
-        Uri.parse("$baseUrl/trips/add"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
+      final response = await ApiService.post(
+        "/trips/add",
+        {
           "tripId": tripId,
           "companyCode": widget.companyCode,
           "tripCode": widget.tripCode,
@@ -98,13 +96,11 @@ class _SupervisorAddTripScreenState extends State<SupervisorAddTripScreen> {
           "note": noteController.text,
           "date": tripDate!.toIso8601String(),
           "time": tripTime!.format(context),
-        }),
+        },
       );
 
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode != 200) {
-        showMsg(data["message"] ?? "❌ خطأ في نشر الرحلة");
+      if (response == null || response["success"] == false) {
+        showMsg(response?["message"] ?? "❌ خطأ في نشر الرحلة");
         setState(() => isLoading = false);
         return;
       }
@@ -150,26 +146,63 @@ class _SupervisorAddTripScreenState extends State<SupervisorAddTripScreen> {
         children: [
           TextField(controller: fromController, decoration: const InputDecoration(labelText: "من")),
           TextField(controller: toController, decoration: const InputDecoration(labelText: "إلى")),
+
           DropdownButtonFormField<String>(
             value: tripType,
             hint: const Text("نوع الرحلة"),
-            items: ["طوعية", "خاصة"].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+            items: ["طوعية", "خاصة"]
+                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                .toList(),
             onChanged: (val) => setState(() => tripType = val),
           ),
+
           DropdownButtonFormField<String>(
             value: vehicleType,
             hint: const Text("الوسيلة"),
-            items: ["باص", "قطار", "سيارة", "هايس"].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+            items: ["باص", "قطار", "سيارة", "هايس"]
+                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                .toList(),
             onChanged: (val) => setState(() => vehicleType = val),
           ),
-          TextField(controller: seatsController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "عدد المقاعد")),
-          TextField(controller: priceController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "سعر المقعد")),
-          TextField(controller: pickupController, decoration: const InputDecoration(labelText: "نقطة التجمع")),
-          TextField(controller: noteController, decoration: const InputDecoration(labelText: "ملاحظة")),
-          ElevatedButton(onPressed: pickDate, child: Text(tripDate == null ? "اختيار التاريخ" : tripDate.toString().split(" ")[0])),
-          ElevatedButton(onPressed: pickTime, child: Text(tripTime == null ? "اختيار الوقت" : tripTime!.format(context))),
+
+          TextField(
+              controller: seatsController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: "عدد المقاعد")),
+
+          TextField(
+              controller: priceController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: "سعر المقعد")),
+
+          TextField(
+              controller: pickupController,
+              decoration: const InputDecoration(labelText: "نقطة التجمع")),
+
+          TextField(
+              controller: noteController,
+              decoration: const InputDecoration(labelText: "ملاحظة")),
+
+          ElevatedButton(
+              onPressed: pickDate,
+              child: Text(tripDate == null
+                  ? "اختيار التاريخ"
+                  : tripDate.toString().split(" ")[0])),
+
+          ElevatedButton(
+              onPressed: pickTime,
+              child: Text(tripTime == null
+                  ? "اختيار الوقت"
+                  : tripTime!.format(context))),
+
           const SizedBox(height: 20),
-          ElevatedButton(onPressed: isLoading ? null : publishTrip, child: isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text("نشر الرحلة")),
+
+          ElevatedButton(
+            onPressed: isLoading ? null : publishTrip,
+            child: isLoading
+                ? const CircularProgressIndicator(color: Colors.white)
+                : const Text("نشر الرحلة"),
+          ),
         ],
       ),
     );
